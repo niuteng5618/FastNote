@@ -93,7 +93,7 @@ jobs:
         if: ${{ github.event.inputs.build_type == 'debug' || github.event.inputs.build_type == '' }}
         uses: actions/upload-artifact@v4
         with:
-          name: flymd-android-debug
+          name: FastNote-android-debug
           path: src-tauri/gen/android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
 
@@ -101,7 +101,7 @@ jobs:
         if: ${{ github.event.inputs.build_type == 'release' }}
         uses: actions/upload-artifact@v4
         with:
-          name: flymd-android-release
+          name: FastNote-android-release
           path: src-tauri/gen/android/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
 
@@ -109,7 +109,7 @@ jobs:
         if: ${{ github.event.inputs.build_type == 'release' }}
         uses: actions/upload-artifact@v4
         with:
-          name: flymd-android-bundle
+          name: FastNote-android-bundle
           path: src-tauri/gen/android/app/build/outputs/bundle/release/*.aab
           if-no-files-found: warn
 

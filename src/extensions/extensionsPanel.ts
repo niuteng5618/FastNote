@@ -129,11 +129,6 @@ const MARKET_OFFICIAL_I18N: Record<string, { name: string; author: string; desc:
     author: 'ext.whiteboardView.author',
     desc: 'ext.whiteboardView.desc',
   },
-  'note-templates': {
-    name: 'ext.noteTemplates.name',
-    author: 'ext.noteTemplates.author',
-    desc: 'ext.noteTemplates.desc',
-  },
   'blinko-snap': {
     name: 'ext.blinkoSnap.name',
     author: 'ext.blinkoSnap.author',
@@ -242,11 +237,10 @@ function getCategoryLabel(raw: string): string {
   return raw
 }
 
-// 内置扩展：只在扩展面板中展示，不走远程安装流程
-const builtinPlugins: InstalledPlugin[] = [
-  { id: 'uploader-s3', name: '', version: 'builtin', enabled: undefined, dir: '', main: '', builtin: true, description: '' },
-  { id: 'webdav-sync', name: '', version: 'builtin', enabled: undefined, dir: '', main: '', builtin: true, description: '' }
-]
+// 注：图床管理 / WebDAV 同步是写死在宿主里的功能（非真扩展，逻辑编译进主程序），
+// 曾在此用 builtinPlugins 影子条目伪装成扩展显示在扩展管理列表里；现按「轻量、不伪装」原则
+// 移除该展示，功能本身保留，入口收敛到左侧「插件」下拉菜单（pluginRuntimeHost.ts 的 addToPluginsMenu）。
+// 若未来要做成真正可安装的扩展，需要自建市场源（原市场无这两个插件）。
 
 // 扩展管理面板内部状态
 let _extOverlayEl: HTMLDivElement | null = null
@@ -459,38 +453,7 @@ export async function refreshInstalledExtensionsUI(): Promise<void> {
 
     renderInstalledExtensions(unifiedList, installedMap, updateMap)
 
-    // 内置扩展的状态标签（图床 / WebDAV 同步）也需要跟随配置刷新
-    if (host) {
-      try {
-        const s3Row = unifiedList.querySelector('[data-type="builtin"][data-ext-id="uploader-s3"]') as HTMLDivElement | null
-        if (s3Row) {
-          const tag = s3Row.querySelector('.ext-tag[data-role="status"]') as HTMLSpanElement | null
-          if (tag) {
-            const store = host.getStore()
-            let upCfg: any = null
-            try {
-              if (store) upCfg = (await store.get('uploader')) as any
-            } catch {
-              upCfg = null
-            }
-            const enabled = !!upCfg?.enabled
-            tag.textContent = enabled ? t('ext.enabled.tag.on') : t('ext.enabled.tag.off')
-            tag.style.color = enabled ? '#22c55e' : '#94a3b8'
-          }
-        }
-
-        const webdavRow = unifiedList.querySelector('[data-type="builtin"][data-ext-id="webdav-sync"]') as HTMLDivElement | null
-        if (webdavRow) {
-          const tag = webdavRow.querySelector('.ext-tag[data-role="status"]') as HTMLSpanElement | null
-          if (tag) {
-            const cfg = await host.getWebdavSyncConfig()
-            const enabled = !!cfg?.enabled
-            tag.textContent = enabled ? t('ext.enabled.tag.on') : t('ext.enabled.tag.off')
-            tag.style.color = enabled ? '#22c55e' : '#94a3b8'
-          }
-        }
-      } catch {}
-    }
+    // 内置扩展（图床 / WebDAV 同步）已不在扩展列表显示，无需再刷新其状态标签
   } catch {}
 }
 
@@ -828,72 +791,8 @@ export async function refreshExtensionsUI(): Promise<void> {
   unifiedSection.appendChild(unifiedList)
   container.appendChild(unifiedSection)
 
-  // 2) 填充 Builtins（仅依赖本地 Store，不走网络）
-  if (host) {
-    const hideBuiltinForCategory = !!(_extMarketCategory || '').trim()
-    // 选择了分类时不展示内置扩展，仅展示与分类匹配的已安装/可安装扩展
-    if (!hideBuiltinForCategory) {
-      for (const b of builtinPlugins) {
-        const row = document.createElement('div')
-        row.className = 'ext-item'
-        row.setAttribute('data-type', 'builtin')
-        row.setAttribute('data-ext-id', b.id)
-        try { row.style.order = String(getPluginOrder(b.id, b.name, -1000)) } catch {}
-        const meta = document.createElement('div'); meta.className = 'ext-meta'
-        const name = document.createElement('div'); name.className = 'ext-name'
-        const nameText = document.createElement('span')
-        const fullName = b.id === 'uploader-s3'
-          ? `${t('ext.builtin.uploaderS3.name' as any)} (${b.version})`
-          : b.id === 'webdav-sync'
-            ? `${t('ext.builtin.webdav.name' as any)} (${b.version})`
-            : `${b.name || b.id} (${b.version})`
-        nameText.textContent = fullName
-        nameText.title = fullName
-        name.appendChild(nameText)
-        const builtinTag = document.createElement('span')
-        builtinTag.className = 'ext-tag'
-        builtinTag.textContent = t('ext.builtin')
-        builtinTag.style.marginLeft = '8px'
-        builtinTag.style.color = '#3b82f6'
-        name.appendChild(builtinTag)
-        name.appendChild(createVendorTag('official'))
-        const desc = document.createElement('div'); desc.className = 'ext-desc'
-        if (b.id === 'uploader-s3') {
-          desc.textContent = t('ext.builtin.uploaderS3.desc' as any)
-        } else if (b.id === 'webdav-sync') {
-          desc.textContent = t('ext.builtin.webdav.desc' as any)
-        } else {
-          desc.textContent = b.description || ''
-        }
-        meta.appendChild(name); meta.appendChild(desc)
-        const actions = document.createElement('div'); actions.className = 'ext-actions'
-        if (b.id === 'uploader-s3') {
-          try {
-            const store = host.getStore()
-            const upCfg = await (async () => { try { if (store) return (await store.get('uploader')) as any } catch { return null } })()
-            const tag = document.createElement('span'); tag.className = 'ext-tag'; tag.setAttribute('data-role', 'status'); tag.textContent = upCfg?.enabled ? t('ext.enabled.tag.on') : t('ext.enabled.tag.off')
-            tag.style.opacity = '0.75'; tag.style.marginRight = '8px'; tag.style.color = upCfg?.enabled ? '#22c55e' : '#94a3b8'
-            actions.appendChild(tag)
-          } catch {}
-          const btn = document.createElement('button'); btn.className = 'btn primary'; btn.textContent = t('ext.settings')
-          btn.addEventListener('click', () => { try { void showExtensionsOverlay(false); void host.openUploaderDialog() } catch {} })
-          actions.appendChild(btn)
-        } else if (b.id === 'webdav-sync') {
-          try {
-            const cfg = await host.getWebdavSyncConfig()
-            const tag = document.createElement('span'); tag.className = 'ext-tag'; tag.setAttribute('data-role', 'status'); tag.textContent = cfg.enabled ? t('ext.enabled.tag.on') : t('ext.enabled.tag.off')
-            tag.style.opacity = '0.75'; tag.style.marginRight = '8px'; tag.style.color = cfg.enabled ? '#22c55e' : '#94a3b8'
-            actions.appendChild(tag)
-          } catch {}
-          const btn2 = document.createElement('button'); btn2.className = 'btn primary'; btn2.textContent = t('ext.settings')
-          btn2.addEventListener('click', () => { try { void showExtensionsOverlay(false); void host.openWebdavSyncDialog() } catch {} })
-          actions.appendChild(btn2)
-        }
-        row.appendChild(meta); row.appendChild(actions)
-        unifiedList.appendChild(row)
-      }
-    }
-  }
+  // 2) 内置扩展（图床管理 / WebDAV 同步）不再在扩展管理列表中显示：
+  //    它们是宿主内置功能而非真扩展（见文件顶部 builtinPlugins 注释），入口在「插件」下拉菜单。
 
   // 3) 并行加载“已安装扩展列表”和“市场索引”，避免无谓的串行等待
   let installedMap: Record<string, InstalledPlugin> = {}
@@ -1142,13 +1041,7 @@ export async function refreshExtensionsUI(): Promise<void> {
       _extGlobalOrder[it.id] = 100 + idx++
     }
   } catch {}
-  try {
-    let idx = 0
-    for (const b of builtinPlugins) {
-      if (!b || !b.id) continue
-      _extGlobalOrder[b.id] = idx++
-    }
-  } catch {}
+  // 内置扩展已不在列表显示，不再参与统一排序
   _extApplyMarketFilter = applyMarketFilter
 
   const arr = Object.values(installedMap)
@@ -1285,4 +1178,12 @@ export async function showExtensionsOverlay(show: boolean): Promise<void> {
   } else {
     _extOverlayEl.classList.remove('show')
   }
+}
+
+// 语言切换后需按新语言重建面板
+export function resetExtensionsPanel(): void {
+  try { _extOverlayEl?.remove() } catch {}
+  _extOverlayEl = null
+  _extListHost = null
+  _extOverlayRenderedOnce = false
 }

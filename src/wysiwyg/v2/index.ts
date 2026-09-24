@@ -796,6 +796,35 @@ export async function enableWysiwygV2(root: HTMLElement, initialMd: string, onCh
   try { setTimeout(() => { try { scheduleCodeCopyRefresh() } catch {} }, 0) } catch {}
 }
 
+export function wysiwygV2GetCaretMarkdownOffset(): number {
+  try {
+    if (!_editor) return -1
+    const md = _lastMd || ''
+    return _editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
+      const head = view.state.selection.head
+      const total = view.state.doc.content.size || 1
+      return Math.round(Math.min(1, head / total) * md.length)
+    })
+  } catch { return -1 }
+}
+
+export function wysiwygV2FocusAtMarkdownOffset(offset: number): void {
+  try {
+    if (!_editor) return
+    _editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx)
+      const total = view.state.doc.content.size
+      const mdLen = Math.max(1, String(_lastMd || '').length)
+      const ratio = Math.min(1, Math.max(0, offset / mdLen))
+      const pos = Math.max(1, Math.min(Math.max(1, total - 1), Math.round(ratio * total)))
+      const sel = TextSelection.near(view.state.doc.resolve(pos))
+      view.dispatch(view.state.tr.setSelection(sel).scrollIntoView())
+      view.focus()
+    })
+  } catch {}
+}
+
 export async function disableWysiwygV2() {
   // 先立即隐藏根节点，避免长文本时 await 期间的视觉不一致
   try {

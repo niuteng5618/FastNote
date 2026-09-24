@@ -64,6 +64,10 @@ export async function ensurePluginsDir(): Promise<void> {
 
 // ===== 已安装插件状态管理（仅处理数据结构与持久化，不关心 UI） =====
 
+// 已退役扩展：功能已内置进应用，不再出现在扩展列表、也不会被激活。
+// 库里残留的旧安装记录在读取时被过滤掉，下次写入即自然清除。
+const RETIRED_PLUGIN_IDS = new Set(['note-templates'])
+
 // 从 Store 中读取已安装插件映射
 export async function loadInstalledPlugins(
   store: Store | null,
@@ -76,7 +80,12 @@ export async function loadInstalledPlugins(
       obj?.installed && typeof obj.installed === 'object'
         ? obj.installed
         : {}
-    return map as Record<string, InstalledPlugin>
+    const out: Record<string, InstalledPlugin> = {}
+    for (const [id, rec] of Object.entries(map as Record<string, InstalledPlugin>)) {
+      if (RETIRED_PLUGIN_IDS.has(id)) continue
+      out[id] = rec
+    }
+    return out
   } catch {
     return {}
   }
@@ -372,8 +381,8 @@ export async function installPluginFromGitCore(
     const requiredVersion = manifest.minHostVersion
     if (compareVersions(currentVersion, requiredVersion) < 0) {
       throw new Error(
-        `此扩展需要 flyMD ${requiredVersion} 或更高版本，当前版本为 ${currentVersion}。\n` +
-          `请先升级 flyMD 再安装此扩展。`,
+        `此扩展需要 FastNote ${requiredVersion} 或更高版本，当前版本为 ${currentVersion}。\n` +
+          `请先升级 FastNote 再安装此扩展。`,
       )
     }
   }
@@ -493,8 +502,8 @@ export async function installPluginFromLocalCore(
     const requiredVersion = manifest.minHostVersion
     if (compareVersions(currentVersion, requiredVersion) < 0) {
       throw new Error(
-        `此扩展需要 flyMD ${requiredVersion} 或更高版本，当前版本为 ${currentVersion}。\n` +
-          `请先升级 flyMD 再安装此扩展。`,
+        `此扩展需要 FastNote ${requiredVersion} 或更高版本，当前版本为 ${currentVersion}。\n` +
+          `请先升级 FastNote 再安装此扩展。`,
       )
     }
   }

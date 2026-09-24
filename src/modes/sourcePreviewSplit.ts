@@ -273,12 +273,24 @@ function syncPreviewScrollFromEditor(editor: HTMLTextAreaElement, preview: HTMLD
 
 function bindScrollSync(deps: SplitDeps): void {
   const { editor, preview } = deps
+  // 两侧互相同步：任一侧滚动都按比例带动另一侧，用锁避免来回触发
+  let _splitScrollLock = false
+  const syncByRatio = (from: HTMLElement, to: HTMLElement) => {
+    const fr = Math.max(0, from.scrollHeight - from.clientHeight)
+    const tr = Math.max(0, to.scrollHeight - to.clientHeight)
+    if (tr <= 0) return
+    const ratio = fr <= 0 ? 0 : from.scrollTop / fr
+    _splitScrollLock = true
+    to.scrollTop = ratio * tr
+    window.setTimeout(() => { _splitScrollLock = false }, 40)
+  }
   editor.addEventListener('scroll', () => {
-    if (!splitPreviewEnabled) return
-    if (!isSupportedContext()) return
-    try {
-      syncPreviewScrollFromEditor(editor, preview)
-    } catch {}
+    if (!splitPreviewEnabled || !isSupportedContext() || _splitScrollLock) return
+    try { syncByRatio(editor, preview) } catch {}
+  })
+  preview.addEventListener('scroll', () => {
+    if (!splitPreviewEnabled || !isSupportedContext() || _splitScrollLock) return
+    try { syncByRatio(preview, editor) } catch {}
   })
 }
 

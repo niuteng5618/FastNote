@@ -72,7 +72,7 @@ async function triggerMobileOpenFile(): Promise<void> {
       editor.dispatchEvent(new Event('input', { bubbles: true }))
 
       // 更新标题
-      document.title = `${fileRef.name} - flymd`
+      document.title = `${fileRef.name} - FastNote`
 
       console.log('[Platform] File opened:', fileRef.name)
     }

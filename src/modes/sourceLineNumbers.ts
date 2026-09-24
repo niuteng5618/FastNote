@@ -633,7 +633,7 @@ function installLineNumbers(): void {
       const mode = getEditorMode()
       const wysiwyg = isWysiwygMode()
       const stickyNote = document.body.classList.contains('sticky-note-mode')
-      const nextLineNumbersActive = lineNumbersPrefEnabled && mode === 'edit' && !wysiwyg && !stickyNote
+      const nextLineNumbersActive = lineNumbersPrefEnabled && (mode === 'edit' || document.querySelector('.container')?.classList.contains('split-preview')) && !wysiwyg && !stickyNote
       const activeChanged = nextLineNumbersActive !== lineNumbersActive
       lineNumbersActive = nextLineNumbersActive
       shell.classList.toggle('line-numbers-disabled', !lineNumbersActive)

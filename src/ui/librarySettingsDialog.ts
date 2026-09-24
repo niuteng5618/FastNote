@@ -85,15 +85,6 @@ export async function openLibrarySettingsDialog(opts: Opts = {}): Promise<void> 
             <span id="lib-settings-cur-name"></span>
           </div>
 
-          <label>${t('lib.settings.switcher') || '库切换位置'}</label>
-          <div class="upl-inline-row">
-            <select id="lib-settings-switcher-pos" class="lib-settings-select">
-              <option value="ribbon">${t('lib.settings.switcher.ribbon') || '垂直标题栏'}</option>
-              <option value="sidebar">${t('lib.settings.switcher.sidebar') || '侧栏内'}</option>
-            </select>
-            <span class="upl-hint">${t('lib.settings.switcher.hint') || '多库切换图标显示位置'}</span>
-          </div>
-
           <label>WebDAV</label>
           <div class="upl-inline-row">
             <label class="switch" for="lib-settings-webdav-enabled">
@@ -142,7 +133,6 @@ export async function openLibrarySettingsDialog(opts: Opts = {}): Promise<void> 
   overlay.querySelector('#lib-settings-cancel')?.addEventListener('click', close)
 
   const elCurName = overlay.querySelector('#lib-settings-cur-name') as HTMLSpanElement
-  const elSwitcherPos = overlay.querySelector('#lib-settings-switcher-pos') as HTMLSelectElement
   const elWebdavEnabled = overlay.querySelector('#lib-settings-webdav-enabled') as HTMLInputElement
   const elWebdavRoot = overlay.querySelector('#lib-settings-webdav-root') as HTMLInputElement
   const elList = overlay.querySelector('#lib-settings-list') as HTMLDivElement
@@ -151,10 +141,6 @@ export async function openLibrarySettingsDialog(opts: Opts = {}): Promise<void> 
   let libs0 = await getLibraries()
   let activeId = await getActiveLibraryId()
   let selectedLibId = (activeId || libs0[0]?.id || null) as string | null
-
-  // 初始化库切换位置设置
-  let draftSwitcherPos: LibSwitcherPosition = await getLibSwitcherPosition()
-  if (elSwitcherPos) elSwitcherPos.value = draftSwitcherPos
 
   // 对话框内的草稿状态：取消不落盘
   let draftOrderIds = libs0.map(l => l.id)
@@ -451,13 +437,6 @@ export async function openLibrarySettingsDialog(opts: Opts = {}): Promise<void> 
       const vis: Record<string, boolean> = {}
       for (const [k, v] of draftSidebarVisible.entries()) vis[k] = !!v
       await applyLibrariesSettings({ orderIds: draftOrderIds, sidebarVisibleById: vis })
-
-      // 保存库切换位置设置并立即更新 UI
-      const newSwitcherPos = (elSwitcherPos?.value || draftSwitcherPos) as LibSwitcherPosition
-      if (newSwitcherPos !== draftSwitcherPos) {
-        await setLibSwitcherPosition(newSwitcherPos)
-        // UI 刷新交给外部回调（避免这里到处写 DOM 特殊情况）
-      }
 
       // WebDAV：按"用户真的改过"的库落盘
       for (const libId of dirtyWebdav) {

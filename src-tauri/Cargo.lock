@@ -1618,12 +1618,15 @@ dependencies = [
 
 [[package]]
 name = "flymd"
-version = "1.4.4"
+version = "1.0.0"
 dependencies = [
  "aws-config",
  "aws-sdk-s3",
+ "cairo-rs",
  "chrono",
  "futures-util",
+ "gdk",
+ "gtk",
  "hex",
  "hmac",
  "percent-encoding",

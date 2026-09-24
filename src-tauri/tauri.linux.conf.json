@@ -4,8 +4,8 @@
     "windows": [
       {
         "label": "main",
-        "title": "飞速MarkDown",
-        "transparent": false,
+        "title": "FastNote",
+        "transparent": true,
         "shadow": true
       }
     ]

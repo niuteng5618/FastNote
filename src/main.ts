@@ -8,7 +8,9 @@ performance.mark('flymd-app-start')
 const _startTime = performance.now()
 import './style.css'
 import './mobile.css'  // 移动端样式
-import { initThemeUI, applySavedTheme, updateChromeColorsForMode } from './theme'
+import './diaryTasks/diaryTasks.css'  // 日记与待办面板 / 模板设置样式
+import { initThemeUI, applySavedTheme, updateChromeColorsForMode, ensureThemePanelReady, resetThemePanel } from './theme'
+import { initSettingsDialog, showSettings } from './ui/settingsDialog'
 import { t, fmtStatus, getLocalePref, setLocalePref, getLocale, tLocale } from './i18n'
 import { getPasteUrlTitleFetchEnabled } from './core/pasteUrlTitle'
 import { getPasteRemoteImagesEnabled } from './core/pasteRemoteImages'
@@ -18,7 +20,7 @@ import { getSymbolAutoCompletionEnabled } from './core/symbolAutoCompletion'
 import type MarkdownIt from 'markdown-it'
 import type { LocalePref } from './i18n'
 // WYSIWYG: 锚点插件与锚点同步（用于替换纯比例同步）
-import { enableWysiwygV2, disableWysiwygV2, wysiwygV2ToggleBold, wysiwygV2ToggleItalic, wysiwygV2ApplyLink, wysiwygV2GetSelectedText, wysiwygV2FindNext, wysiwygV2FindPrev, wysiwygV2ReplaceOne as wysiwygV2ReplaceOneSel, wysiwygV2ReplaceAllInDoc, wysiwygV2ReplaceAll, wysiwygV2HandleListTab, wysiwygV2DeleteTableRow, wysiwygV2DeleteTableColumn } from './wysiwyg/v2/index'
+import { enableWysiwygV2, disableWysiwygV2, wysiwygV2ToggleBold, wysiwygV2ToggleItalic, wysiwygV2ApplyLink, wysiwygV2GetSelectedText, wysiwygV2FindNext, wysiwygV2FindPrev, wysiwygV2ReplaceOne as wysiwygV2ReplaceOneSel, wysiwygV2ReplaceAllInDoc, wysiwygV2ReplaceAll, wysiwygV2HandleListTab, wysiwygV2DeleteTableRow, wysiwygV2DeleteTableColumn, wysiwygV2GetCaretMarkdownOffset, wysiwygV2FocusAtMarkdownOffset } from './wysiwyg/v2/index'
 import { setWysiwygPreload } from './wysiwyg/v2/silentTransition'
 // Tauri 插件（v2）
 // Tauri 对话框：使用 ask 提供原生确认，避免浏览器 confirm 在关闭事件中失效
@@ -134,7 +136,6 @@ import {
   installPluginFromGitCore,
   installPluginFromLocalCore,
   type PluginManifest,
-  type InstalledPlugin,
   type PluginUpdateState,
 } from './extensions/runtime'
 import {
@@ -163,8 +164,10 @@ import {
   isCommandPaletteOpen,
 } from './ui/commandPalette'
 import { openLinkDialog, openRenameDialog } from './ui/linkDialogs'
-import { initExtensionsPanel, refreshExtensionsUI as panelRefreshExtensionsUI, showExtensionsOverlay as panelShowExtensionsOverlay, prewarmExtensionsPanel as panelPrewarmExtensionsPanel } from './extensions/extensionsPanel'
+import { initExtensionsPanel, refreshExtensionsUI as panelRefreshExtensionsUI, showExtensionsOverlay as panelShowExtensionsOverlay, prewarmExtensionsPanel as panelPrewarmExtensionsPanel, resetExtensionsPanel } from './extensions/extensionsPanel'
 import { ensureUpdateOverlay, showUpdateOverlayLinux, showUpdateDownloadedOverlay, showInstallFailedOverlay, loadUpdateExtra, renderUpdateDetailsHTML } from './ui/updateOverlay'
+import { initDiaryTasks } from './diaryTasks'
+import { renderTemplatesPanel } from './diaryTasks/settingsPanel'
 import { openInBrowser, upMsg } from './core/updateUtils'
 import { getUpdateCheckDisabled } from './core/updateCheckPrefs'
 import { getDefaultOutlineTabEnabled } from './core/defaultOutlineTab'
@@ -294,7 +297,7 @@ function scheduleDeferredStartupWork(): void {
     void import('./ui/libraryResize').catch(e => console.warn('[LibraryResize] Failed to init library resize:', e))
   }, 240)
   scheduleAfterFirstPaint(() => {
-    try { applyI18nUi() } catch {}
+    try { (window as any).flymdApplyI18nUi = () => { try { applyI18nUi() } catch {} } } catch {}
   }, 320)
   scheduleAfterFirstPaint(() => {
     try { void getAutoSave().loadFromStore() } catch {}
@@ -1021,10 +1024,8 @@ function toPluginAssetUrl(absDir: string | null, relPath: string): string {
     return typeof convertFileSrc === 'function' ? convertFileSrc(abs) : abs
   } catch { return '' }
 }
-const builtinPlugins: InstalledPlugin[] = [
-  { id: 'uploader-s3', name: '图床管理', version: 'builtin', enabled: undefined, dir: '', main: '', builtin: true, description: '粘贴/拖拽图片自动上传，支持 S3/R2 或 ImgLa，使用设置中的凭据。' },
-  { id: 'webdav-sync', name: 'WebDAV 同步', version: 'builtin', enabled: undefined, dir: '', main: '', builtin: true, description: 'F5/启动/关闭前同步，基于修改时间覆盖' }
-]
+// 注：图床管理 / WebDAV 同步是宿主内置功能（非真扩展），不再以影子条目出现在扩展管理列表；
+// 功能入口保留在「插件」下拉菜单（pluginRuntimeHost.ts）。此处的 builtinPlugins 死代码已移除。
 
 async function readUploaderEnabledState(): Promise<boolean> {
   try {
@@ -1096,7 +1097,7 @@ async function handleExportConfigFromMenu(): Promise<void> {
     const defaultName = `flymd-config-${ts}.${CONFIG_BACKUP_FILE_EXT}`
     const target = await save({
       defaultPath: defaultName,
-      filters: [{ name: 'flyMD 配置备份', extensions: [CONFIG_BACKUP_FILE_EXT, 'json'] }]
+      filters: [{ name: 'FastNote 配置备份', extensions: [CONFIG_BACKUP_FILE_EXT, 'json'] }]
     } as any)
     if (!target) return
     const payload: ConfigBackupPayload = {
@@ -1116,7 +1117,7 @@ async function handleExportConfigFromMenu(): Promise<void> {
 async function handleImportConfigFromMenu(): Promise<void> {
   try {
     const picked = await open({
-      filters: [{ name: 'flyMD 配置备份', extensions: [CONFIG_BACKUP_FILE_EXT, 'json'] }]
+      filters: [{ name: 'FastNote 配置备份', extensions: [CONFIG_BACKUP_FILE_EXT, 'json'] }]
     } as any)
     const path = Array.isArray(picked) ? (picked[0] || '') : (picked || '')
     if (!path) return
@@ -1130,7 +1131,7 @@ async function handleImportConfigFromMenu(): Promise<void> {
     if (!payload || typeof payload.version !== 'number' || payload.version < 1 || !Array.isArray(payload.files)) {
       throw new Error('备份文件不兼容')
     }
-    const confirmed = await ask('导入配置会清空并覆盖当前所有 flyMD 配置、扩展、日志与缓存数据，并需要重启后生效，是否继续？')
+    const confirmed = await ask('导入配置会清空并覆盖当前所有 FastNote 配置、扩展、日志与缓存数据，并需要重启后生效，是否继续？')
     if (!confirmed) return
     const result = await restoreConfigFromPayload(payload)
     const restoredMsg = result.settings ? '配置/日志已恢复' : '文件已恢复'
@@ -1620,20 +1621,12 @@ function guard<T extends (...args: any[]) => any>(fn: T) {
 const app = document.getElementById('app')!
 app.innerHTML = `
   <aside class="ribbon" id="ribbon">
-    <div class="ribbon-libs" id="ribbon-libs"></div>
-    <div class="ribbon-divider" id="ribbon-libs-divider"></div>
     <div class="ribbon-top">
-      <button class="ribbon-btn" id="btn-filetree" title="${t('lib.toggle')}">${ribbonIcons.folder}</button>
-      <button class="ribbon-btn" id="btn-open" title="${t('menu.file')}">${ribbonIcons.fileText}</button>
-      <button class="ribbon-btn" id="btn-mode" title="${t('menu.mode')}">${ribbonIcons.layout}</button>
+      <button class="ribbon-btn" id="btn-open" title="${t('menu.file')}">${ribbonIcons.folder}</button>
       <button class="ribbon-btn" id="btn-plugins" title="${t('menu.plugins')}">${ribbonIcons.menu}</button>
-      <button class="ribbon-btn" id="btn-update" title="${t('menu.update')}">${ribbonIcons.refreshCw}</button>
-      <button class="ribbon-btn" id="btn-about" title="${t('menu.about')}">${ribbonIcons.info}</button>
     </div>
     <div class="ribbon-bottom">
-      <button class="ribbon-btn" id="btn-theme" title="${t('menu.theme.tooltip')}">${ribbonIcons.settings}</button>
-      <button class="ribbon-btn" id="btn-extensions" title="${t('menu.extensions')}">${ribbonIcons.grid}</button>
-      <button class="ribbon-btn" id="btn-lang" title="${t('menu.language')}">${ribbonIcons.type}</button>
+      <button class="ribbon-btn" id="btn-theme" title="设置">${ribbonIcons.settings}</button>
     </div>
   </aside>
   <main class="main-content">
@@ -1651,6 +1644,15 @@ app.innerHTML = `
       <textarea id="editor" class="editor" spellcheck="false" placeholder="${t('editor.placeholder')}"></textarea>
       <div id="preview" class="preview hidden"></div>
       <div class="statusbar" id="status">${fmtStatus(1,1)}</div>
+      <div class="mode-switch" id="mode-switch">
+        <button type="button" class="ribbon-btn" id="btn-lib-collapse" title="隐藏侧边栏">&lt;</button>
+        <button type="button" class="ribbon-btn" id="btn-mode" title="${t('menu.mode')}">${ribbonIcons.layout}</button>
+        <div class="mode-pop" id="mode-pop" hidden>
+          <button type="button" data-mode-target="source"><span class="mode-mark"></span><span>源码</span><span class="mode-accel">Ctrl+E</span></button>
+          <button type="button" data-mode-target="wysiwyg"><span class="mode-mark"></span><span>所见</span><span class="mode-accel">Ctrl+W</span></button>
+          <button type="button" data-mode-target="split"><span class="mode-mark"></span><span>分屏</span><span class="mode-accel">Ctrl+Shift+E</span></button>
+        </div>
+      </div>
       <div class="notification-container" id="notification-container"></div>
       <div class="status-zoom" id="status-zoom"><span id="zoom-label">100%</span> <button id="zoom-reset" title="重置缩放">重置</button></div>
     </div>
@@ -1674,7 +1676,62 @@ try { initPlatformClass() } catch {}
 try { initWindowsCompositorPoke() } catch {}
 // 应用已保存主题并挂载主题 UI
 try { applySavedTheme() } catch {}
+try { (window as any).flymdShowSettings = () => showSettings(true) } catch {}
+try { (window as any).flymdEnsureThemePanel = () => ensureThemePanelReady() } catch {}
 try { initThemeUI() } catch {}
+// 设置区面板引用：切换分区时面板会从文档中摘下（游离），不能用 getElementById 找，需持有引用
+const _settingsPanels: { theme?: HTMLElement; extDialog?: HTMLElement; about?: HTMLElement } = {}
+// 语言切换后：面板按新语言重建，设置窗口若开着则刷新当前分区
+window.addEventListener('flymd:localeChanged', () => {
+  try { delete _settingsPanels.theme } catch {}
+  try { delete _settingsPanels.extDialog } catch {}
+  try { delete _settingsPanels.about } catch {}
+  try { resetThemePanel() } catch {}
+  try { resetExtensionsPanel() } catch {}
+  try { void (async () => { const m = await loadAboutOverlayModule(); m.resetAboutOverlay?.() })() } catch {}
+  try { showSettings(true) } catch {}
+})
+try {
+  initSettingsDialog(async (section, host) => {
+    if (section === 'theme') {
+      let panel = _settingsPanels.theme || document.getElementById('theme-panel')
+      if (!panel) { try { panel = (window as any).flymdEnsureThemePanel?.() || null } catch {} }
+      if (panel) {
+        _settingsPanels.theme = panel
+        panel.classList.remove('hidden')
+        host.appendChild(panel)
+      }
+    } else if (section === 'extensions') {
+      let inner = _settingsPanels.extDialog || document.querySelector('#extensions-overlay .ext-dialog') as HTMLElement | null
+      if (!inner) {
+        // 面板从未创建：让扩展模块完成挂载与列表渲染
+        try { await panelShowExtensionsOverlay(true) } catch {}
+        inner = document.querySelector('#extensions-overlay .ext-dialog') as HTMLElement | null
+        try { await panelShowExtensionsOverlay(false) } catch {}
+      }
+      if (inner) {
+        const firstTime = !_settingsPanels.extDialog
+        _settingsPanels.extDialog = inner
+        host.appendChild(inner)
+        // 只在首次挂载时渲染列表；之后复用，避免每次进入都重建刷新
+        if (firstTime) { try { panelRefreshExtensionsUI() } catch {} }
+      }
+    } else if (section === 'templates') {
+      // 模板设置：每次进入重建（内容取决于当前模板，无需像主题/扩展那样缓存 DOM 引用）
+      try { await renderTemplatesPanel(host) } catch (e) { console.error('[diaryTasks] 渲染模板设置失败', e) }
+    } else if (section === 'about') {
+      let about = _settingsPanels.about || document.getElementById('about-overlay')
+      if (!about) {
+        try { await setAboutOverlayVisible(true) } catch {}
+        about = document.getElementById('about-overlay')
+      }
+      if (about) {
+        _settingsPanels.about = about
+        host.appendChild(about)
+      }
+    }
+  })
+} catch {}
 // 将专注模式切换函数暴露到全局，供主题面板调用
 ;(window as any).flymdToggleFocusMode = async (enabled: boolean) => {
   try {
@@ -1941,6 +1998,85 @@ function ensurePreviewLinkHandlingBound(): void {
   _previewLinkEventsBound = true
 }
 try { ensurePreviewLinkHandlingBound() } catch {}
+
+// Typora 式交互：所见模式下双击正文进入源码编辑，点击编辑区以外自动保存并回到所见模式。
+// 切换时按 Markdown 偏移量恢复光标，保持停在双击的那个位置附近。
+let _typoraEditActive = false
+let _typoraBlurTimer: number | null = null
+let _typoraCaretOffset = -1
+
+function isTyporaInteractiveTarget(node: EventTarget | null): boolean {
+  const el = node instanceof Element ? node : (node as Node | null)?.parentElement
+  if (!el) return false
+  return !!el.closest('a[href], input, button, label, .task-list-item-checkbox, video, audio, iframe')
+}
+
+function placeTextareaCaret(offset: number): void {
+  try {
+    const ta = editor as HTMLTextAreaElement
+    const pos = Math.max(0, Math.min(offset, ta.value.length))
+    ta.focus()
+    ta.setSelectionRange(pos, pos)
+    const before = ta.value.slice(0, pos)
+    const line = before.split('\n').length - 1
+    const lineHeight = parseFloat(window.getComputedStyle(ta).lineHeight || '20') || 20
+    ta.scrollTop = Math.max(0, line * lineHeight - ta.clientHeight / 2)
+  } catch {}
+}
+
+async function enterTyporaEdit(): Promise<void> {
+  if (_typoraEditActive) return
+  if (!wysiwyg) return
+  if ((currentFilePath || '').toLowerCase().endsWith('.pdf')) return
+  _typoraCaretOffset = wysiwygV2GetCaretMarkdownOffset()
+  _typoraEditActive = true
+  try { await setWysiwygEnabled(false) } catch { _typoraEditActive = false; return }
+  mode = 'edit'
+  try { preview.classList.add('hidden') } catch {}
+  try { syncToggleButton() } catch {}
+  try { notifyModeChange() } catch {}
+  if (_typoraCaretOffset >= 0) placeTextareaCaret(_typoraCaretOffset)
+  else { try { (editor as HTMLTextAreaElement).focus() } catch {} }
+  const onBlur = () => {
+    if (_typoraBlurTimer != null) window.clearTimeout(_typoraBlurTimer)
+    _typoraBlurTimer = window.setTimeout(() => { void exitTyporaEdit() }, 120)
+  }
+  const onFocus = () => {
+    if (_typoraBlurTimer != null) { window.clearTimeout(_typoraBlurTimer); _typoraBlurTimer = null }
+  }
+  editor.addEventListener('blur', onBlur)
+  editor.addEventListener('focus', onFocus)
+  ;(editor as any)._typoraBlurBound = { onBlur, onFocus }
+}
+
+async function exitTyporaEdit(): Promise<void> {
+  if (!_typoraEditActive) return
+  if (document.activeElement === editor) return
+  _typoraEditActive = false
+  try {
+    const bound = (editor as any)._typoraBlurBound
+    if (bound) { editor.removeEventListener('blur', bound.onBlur); editor.removeEventListener('focus', bound.onFocus) }
+  } catch {}
+  try { _typoraCaretOffset = (editor as HTMLTextAreaElement).selectionStart >>> 0 } catch { _typoraCaretOffset = -1 }
+  try { if (dirty) await saveFile() } catch {}
+  try { await setWysiwygEnabled(true) } catch {}
+  try { notifyModeChange() } catch {}
+  if (_typoraCaretOffset >= 0) {
+    setTimeout(() => { try { wysiwygV2FocusAtMarkdownOffset(_typoraCaretOffset) } catch {} }, 60)
+  }
+}
+
+try {
+  document.addEventListener('dblclick', (ev) => {
+    if (ev.defaultPrevented || ev.button !== 0) return
+    if (!wysiwyg) return
+    const root = document.getElementById('md-wysiwyg-root')
+    if (!root || !root.contains(ev.target as Node)) return
+    if (isTyporaInteractiveTarget(ev.target)) return
+    ev.preventDefault()
+    void enterTyporaEdit()
+  })
+} catch {}
 
 // 编辑器底部 padding 的“基线值”（从 CSS 计算得到，包含文末留白）
 let _editorPadBottomBasePx = 40
@@ -3113,15 +3249,13 @@ wysiwygCaretEl.id = 'wysiwyg-caret'
           <span class="lib-vault-arrow">${ribbonIcons.chevronDown}</span>
         </button>
       </div>
-      <div class="lib-vault-list hidden" id="lib-vault-list"></div>
+      <div class="lib-vault-list hidden" id="lib-vault-list" style="display:none"></div>
       <div class="lib-actions">
         <button class="lib-action-btn lib-icon-btn ${defaultOutlineTabEnabled ? '' : 'active'}" id="lib-tab-files" title="${t('tab.files')}">${ribbonIcons.layers}</button>
         <button class="lib-action-btn lib-icon-btn ${defaultOutlineTabEnabled ? 'active' : ''}" id="lib-tab-outline" title="${t('tab.outline')}">${ribbonIcons.list}</button>
         <button class="lib-action-btn lib-icon-btn" id="lib-layout" title="${t('outline.layout')}">${ribbonIcons.columnsThree}</button>
         <button class="lib-action-btn lib-icon-btn" id="btn-search" title="${t('search.title')}">${ribbonIcons.search}</button>
         <button class="lib-action-btn lib-icon-btn hidden" id="lib-refresh" title="${t('lib.refresh')}">${ribbonIcons.refreshCw}</button>
-        <button class="lib-action-btn lib-icon-btn" id="lib-side" title="${t('lib.side.left')}">${ribbonIcons.sidebarLeft}</button>
-        <button class="lib-action-btn lib-icon-btn" id="lib-pin" title="${t('lib.pin.auto')}">${ribbonIcons.pin}</button>
       </div>
     </div>
     <div class="lib-tree ${defaultOutlineTabEnabled ? 'hidden' : ''}" id="lib-tree"></div>
@@ -3141,7 +3275,7 @@ wysiwygCaretEl.id = 'wysiwyg-caret'
     _libEdgeEl.style.pointerEvents = 'auto'
     _libEdgeEl.style.background = 'transparent'
     _libEdgeEl.style.display = 'none'
-    _libEdgeEl.addEventListener('mouseenter', () => { try { if (!libraryDocked) showLibrary(true, false) } catch {} })
+    _libEdgeEl.style.pointerEvents = 'none'
     containerEl.appendChild(_libEdgeEl)
   } catch {}
   try {
@@ -3206,19 +3340,7 @@ wysiwygCaretEl.id = 'wysiwyg-caret'
           } catch {}
         })
       }
-    // 绑定固定/自动切换按钮
-      const elPin = library.querySelector('#lib-pin') as HTMLButtonElement | null
-    if (elPin) {
-      ;(async () => { try { libraryDocked = await getLibraryDocked(); elPin.innerHTML = libraryDocked ? ribbonIcons.pinOff : ribbonIcons.pin; elPin.title = libraryDocked ? t('lib.pin.auto') : t('lib.pin.fixed'); applyLibraryLayout() } catch {} })()
-      elPin.addEventListener('click', () => { void setLibraryDocked(!libraryDocked) })
-    }
-      const elSide = library.querySelector('#lib-side') as HTMLButtonElement | null
-    if (elSide) {
-      updateLibrarySideButton()
-      elSide.addEventListener('click', () => {
-        void setLibrarySide(librarySide === 'left' ? 'right' : 'left')
-      })
-    }
+    // 侧边栏固定常驻，不再提供固定/浮动开关
         // 绑定侧栏收起/展开按钮
         const elToggle = library.querySelector('#lib-toggle') as HTMLButtonElement | null
         if (elToggle) {
@@ -3273,7 +3395,7 @@ wysiwygCaretEl.id = 'wysiwyg-caret'
       libraryVisible = visible
       showLibrary(visible, false)
     } catch {
-      showLibrary(libraryVisible, false)
+      showLibrary(true, false)
     }
   })()
 
@@ -3508,7 +3630,7 @@ function refreshTitle() {
     try { filenameLabel.title = titleTip } catch {}
     _lastRenderedTitleTooltip = titleTip
   }
-  const osTitle = `${label} - 飞速MarkDown`
+  const osTitle = `${label} - FastNote`
   if (_lastRenderedOsTitle !== osTitle) {
     try { void getCurrentWindow().setTitle(osTitle).catch(() => {}) } catch {}
     _lastRenderedOsTitle = osTitle
@@ -5442,13 +5564,10 @@ function syncToggleButton() {
   } catch {}
 }
 
-// 打开文件后强制切换为预览模式
+// 打开文件后进入所见模式（阅读模式不再作为默认）
 async function switchToPreviewAfterOpen() {
   try {
-    // 所见模式会在外部显式关闭/重新开启，这里只负责普通预览
-    if (wysiwyg) return
-
-    // 如果开启了“默认源码模式”，则保持源码编辑视图，不自动切到预览
+    // 若开启“默认源码模式”，保持源码编辑视图
     try {
       const SOURCEMODE_DEFAULT_KEY = 'flymd:sourcemode:default'
       const sourcemodeDefault = localStorage.getItem(SOURCEMODE_DEFAULT_KEY) === 'true'
@@ -5461,14 +5580,139 @@ async function switchToPreviewAfterOpen() {
       }
     } catch {}
 
-    mode = 'preview'
-    try { await renderPreview() } catch (e) { try { showError('预览渲染失败', e) } catch {} }
-    try { preview.classList.remove('hidden') } catch {}
-    try { syncToggleButton() } catch {}
+    if ((currentFilePath || '').toLowerCase().endsWith('.pdf')) {
+      mode = 'preview'
+      try { preview.classList.remove('hidden') } catch {}
+      try { syncToggleButton() } catch {}
+      try { notifyModeChange() } catch {}
+      return
+    }
+
+    try { await setWysiwygEnabled(true) } catch {}
+    try { notifyModeChange() } catch {}
   } catch {}
 }
 
-// 绑定事件
+// 左下角模式按钮：点击向上弹出 源码 / 所见 / 分屏，当前模式打点标识
+function initModeSwitch() {
+  const bar = document.getElementById('mode-switch')
+  const pop = document.getElementById('mode-pop') as HTMLDivElement | null
+  const trigger = document.getElementById('btn-mode') as HTMLButtonElement | null
+  if (!bar || !pop || !trigger) return
+  const flymd = window as any
+
+  const currentKind = (): 'source' | 'wysiwyg' | 'split' => {
+    try { if (flymd.flymdGetSplitPreviewEnabled?.()) return 'split' } catch {}
+    if (wysiwyg) return 'wysiwyg'
+    return 'source'
+  }
+
+  const refresh = () => {
+    const cur = currentKind()
+    pop.querySelectorAll('button').forEach((b) => {
+      b.classList.toggle('active', (b as HTMLElement).dataset.modeTarget === cur)
+    })
+  }
+
+  const hide = () => { pop.hidden = true }
+  trigger.addEventListener('click', (ev) => {
+    ev.stopPropagation()
+    refresh()
+    pop.hidden = !pop.hidden
+  })
+  document.addEventListener('click', (ev) => {
+    if (!bar.contains(ev.target as Node)) hide()
+  })
+
+  pop.addEventListener('click', (ev) => {
+    const btn = (ev.target as HTMLElement).closest('button') as HTMLButtonElement | null
+    if (!btn) return
+    const target = btn.dataset.modeTarget
+    hide()
+    void (async () => {
+      const splitOn = !!flymd.flymdGetSplitPreviewEnabled?.()
+      if (target === 'source') {
+        if (splitOn) { try { flymd.flymdToggleSplitPreview?.() } catch {} }
+        if (wysiwyg) { try { await setWysiwygEnabled(false) } catch {} }
+        mode = 'edit'
+        try { preview.classList.add('hidden') } catch {}
+        try { (editor as HTMLTextAreaElement).focus() } catch {}
+      } else if (target === 'wysiwyg') {
+        if (splitOn) { try { flymd.flymdToggleSplitPreview?.() } catch {} }
+        try { await setWysiwygEnabled(true) } catch {}
+      } else if (target === 'split') {
+        if (wysiwyg) { try { await setWysiwygEnabled(false) } catch {} }
+        mode = 'edit'
+        if (!flymd.flymdGetSplitPreviewEnabled?.()) { try { flymd.flymdToggleSplitPreview?.() } catch {} }
+      }
+      try { syncToggleButton() } catch {}
+      try { notifyModeChange() } catch {}
+      refresh()
+    })()
+  })
+
+  window.addEventListener('flymd:mode:changed', refresh)
+  refresh()
+
+  // 侧边栏显隐：常驻显示，由左下角按钮控制；显示时正文让出侧边栏宽度
+  const libBtn = document.getElementById('btn-lib-collapse') as HTMLButtonElement | null
+  const syncLibBtn = () => {
+    if (!libBtn) return
+    const shown = libraryVisible
+    libBtn.textContent = shown ? '<' : '>'
+    libBtn.title = shown ? '隐藏侧边栏' : '显示侧边栏'
+  }
+  if (libBtn) {
+    libBtn.addEventListener('click', () => {
+      showLibrary(!libraryVisible)
+      syncLibBtn()
+    })
+  }
+  try { showLibrary(true, false) } catch {}
+  syncLibBtn()
+}
+try { initModeSwitch() } catch {}
+
+// 源码模式标题行着色：用一层与文字对齐的覆盖，把 # 开头的行染成对应级别的颜色
+function initSourceHeadingHighlight() {
+  const shell = document.querySelector('.editor-shell') as HTMLElement | null
+  const ta = editor as HTMLTextAreaElement | null
+  if (!shell || !ta) return
+  const overlay = document.createElement('div')
+  overlay.className = 'editor-heading-overlay'
+  shell.appendChild(overlay)
+
+  const render = () => {
+    const show = mode === 'edit' && !wysiwyg
+    overlay.style.display = show ? '' : 'none'
+    if (!show) return
+    const cs = window.getComputedStyle(ta)
+    overlay.style.font = cs.font
+    overlay.style.lineHeight = cs.lineHeight
+    overlay.style.padding = cs.padding
+    overlay.style.letterSpacing = cs.letterSpacing
+    const lines = ta.value.split('\n')
+    const lh = parseFloat(cs.lineHeight || '20') || 20
+    const padTop = parseFloat(cs.paddingTop || '0') || 0
+    let html = ''
+    for (let i = 0; i < lines.length; i++) {
+      const m = lines[i].match(/^(#{1,6}) (.*)$/)
+      if (!m) continue
+      const top = padTop + i * lh - ta.scrollTop
+      if (top < -lh || top > ta.clientHeight) continue
+      const text = lines[i].replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      html += `<div class="hl-line h${m[1].length}" style="top:${top}px">${text}</div>`
+    }
+    overlay.innerHTML = html
+  }
+
+  ta.addEventListener('input', render)
+  ta.addEventListener('scroll', render)
+  window.addEventListener('flymd:mode:changed', render)
+  window.addEventListener('resize', render)
+  render()
+}
+try { setTimeout(() => { try { initSourceHeadingHighlight() } catch {} }, 300) } catch {}
 
 
 // 显示/隐藏 关于 弹窗
@@ -6539,7 +6783,7 @@ function updateLibrarySideButton() {
 function syncLibraryEdgeState(libVisible: boolean) {
   try {
     if (!_libEdgeEl) return
-    _libEdgeEl.style.display = (!libraryDocked && !libVisible) ? 'block' : 'none'
+    _libEdgeEl.style.display = 'none'
     if (librarySide === 'right') {
       _libEdgeEl.style.left = ''
       _libEdgeEl.style.right = '0'
@@ -6633,7 +6877,7 @@ function applyOutlineLayout() {
     }
       if (container) {
         container.classList.remove('with-library-left', 'with-library-right')
-        if (visible && libraryDocked) {
+        if (visible) {
           container.classList.add('with-library')
           container.classList.add(librarySide === 'right' ? 'with-library-right' : 'with-library-left')
         } else {
@@ -6649,40 +6893,61 @@ function applyOutlineLayout() {
   syncCustomTitlebarPlacement()
 }
 
-  // 库面板显示/隐藏：使用覆盖式抽屉为默认；若开启“固定”，则并排显示
+  // 库面板显示/隐藏：JS 逐帧同时驱动侧边栏滑动与正文让位，按钮随正文区一起移动
+  let _libAnimRaf = 0
+  function animateLibrary(lib: HTMLDivElement, show: boolean): void {
+    try {
+      if (_libAnimRaf) { cancelAnimationFrame(_libAnimRaf); _libAnimRaf = 0 }
+      const sideRight = lib.classList.contains('side-right')
+      const gapName = sideRight ? '--gap-right-library' : '--gap-left-library'
+      const container = document.querySelector('.container') as HTMLDivElement | null
+      const width = lib.offsetWidth || 240
+      const dur = 200
+      const t0 = performance.now()
+      const ease = (t: number) => 1 - Math.pow(1 - t, 3)
+      // 起始状态先同步落位，避免show时先闪一帧
+      lib.classList.remove('hidden')
+      lib.style.opacity = show ? '0' : '1'
+      lib.style.transform = `translateX(${show ? -1 * (sideRight ? -width : width) : 0}px)`
+      const step = (now: number) => {
+        const t = Math.min(1, (now - t0) / dur)
+        const e = ease(t)
+        // 侧边栏位移：show 从 −width → 0，hide 从 0 → −width
+        const offset = show ? -width * (1 - e) : -width * e
+        lib.style.transform = `translateX(${sideRight ? -offset : offset}px)`
+        lib.style.opacity = show ? String(e) : String(1 - e)
+        // 正文让位：show 从 0 → width，hide 从 width → 0
+        const gap = show ? width * e : width * (1 - e)
+        try { container?.style.setProperty(gapName, `${gap}px`) } catch {}
+        if (t < 1) {
+          _libAnimRaf = requestAnimationFrame(step)
+        } else {
+          _libAnimRaf = 0
+          lib.style.transform = ''
+          lib.style.opacity = ''
+          try { container?.style.removeProperty(gapName) } catch {}
+          if (!show) lib.classList.add('hidden')
+          try { applyLibraryLayout() } catch {}
+        }
+      }
+      _libAnimRaf = requestAnimationFrame(step)
+    } catch {}
+  }
   function showLibrary(show: boolean, persist = true) {
   libraryVisible = !!show
   const lib = document.getElementById('library') as HTMLDivElement | null
   if (!lib) return
-  lib.classList.toggle('hidden', !show)
+    const wasHidden = lib.classList.contains('hidden')
+    if (wasHidden !== !show) {
+      animateLibrary(lib, show)
+    } else {
+      lib.classList.toggle('hidden', !show)
+    }
     applyLibraryLayout()
   if (show && !fileTreeReady) {
     void (async () => {
       try { await refreshLibraryUiAndTree(true) } catch {}
     })()
-  }
-  // 非固定模式：绑定悬停离开自动隐藏
-  if (show && !libraryDocked) {
-    try {
-      // 仅绑定一次
-      if (!(lib as any)._hoverBound) {
-        const onEnter = () => { if (_libLeaveTimer != null) { clearTimeout(_libLeaveTimer); _libLeaveTimer = null } }
-        const onLeave = (ev: MouseEvent) => {
-          try {
-            if (libraryDocked) return
-            const rt = ev.relatedTarget as Node | null
-            if (rt && lib.contains(rt)) return
-            if (_libLeaveTimer != null) { clearTimeout(_libLeaveTimer); _libLeaveTimer = null }
-            _libLeaveTimer = window.setTimeout(() => {
-              try { if (!libraryDocked && lib && !lib.matches(':hover')) showLibrary(false, false) } catch {}
-            }, 200)
-          } catch {}
-        }
-        lib.addEventListener('mouseenter', onEnter)
-        lib.addEventListener('mouseleave', onLeave)
-        ;(lib as any)._hoverBound = true
-      }
-    } catch {}
   }
     // 更新边缘热区可见性
     try {
@@ -6692,44 +6957,9 @@ function applyOutlineLayout() {
   if (persist) { void persistLibraryVisible() }
 }
 
-  async function setLibraryDocked(docked: boolean, persist = true) {
-    libraryDocked = !!docked
-    writeLibraryDockedToLocalStorage(libraryDocked)
-    try {
-      if (persist && store) {
-        await store.set('libraryDocked', libraryDocked)
-        await store.save()
-      }
-    } catch {}
-    // 更新按钮图标和提示
-    try {
-      const btn = document.getElementById('lib-pin') as HTMLButtonElement | null
-      if (btn) {
-        btn.innerHTML = libraryDocked ? ribbonIcons.pinOff : ribbonIcons.pin
-        btn.title = libraryDocked ? t('lib.pin.auto') : t('lib.pin.fixed')
-      }
-    } catch {}
-    applyLibraryLayout()
-    // 若当前已显示且切到“非固定”，补绑定悬停自动隐藏
-    try {
-      const lib = document.getElementById('library') as HTMLDivElement | null
-      if (lib && !lib.classList.contains('hidden') && !libraryDocked) showLibrary(true, false)
-    } catch {}
-  }
-
-  async function getLibraryDocked(): Promise<boolean> {
-    const fromLs = readLibraryDockedFromLocalStorage()
-    if (fromLs != null) { libraryDocked = fromLs; return fromLs }
-    try {
-      if (!store) return libraryDocked
-      const v = await store.get('libraryDocked')
-      libraryDocked = !!v
-      writeLibraryDockedToLocalStorage(libraryDocked)
-      return libraryDocked
-    } catch {
-      return libraryDocked
-    }
-  }
+  // 侧边栏固定常驻，保留空实现以免旧调用点报错
+  async function setLibraryDocked(_docked: boolean, _persist = true) {}
+  async function getLibraryDocked(): Promise<boolean> { return true }
 
 async function persistLibraryVisible() {
   try { if (!store) return; await store.set('libraryVisible', libraryVisible); await store.save() } catch {}
@@ -6875,29 +7105,21 @@ async function persistLibraryVisible() {
     return picked
   }
 
-  async function setLibrarySide(side: LibrarySide, persist = true) {
-    librarySide = side === 'right' ? 'right' : 'left'
-    writeLibrarySideToLocalStorage(librarySide)
-    try {
-      if (persist && store) {
-        await store.set('librarySide', librarySide)
-        await store.save()
-      }
-    } catch {}
-    updateLibrarySideButton()
-    applyLibraryLayout()
+  // 侧边栏固定在左侧，不再提供左右切换
+  async function setLibrarySide(_side: LibrarySide, _persist = true) {
+    librarySide = 'left'
   }
 
   async function getLibrarySide(): Promise<LibrarySide> {
     const fromLs = readLibrarySideFromLocalStorage()
-    if (fromLs) { librarySide = fromLs; return fromLs }
+    if (fromLs === 'left') { librarySide = 'left'; return 'left' }
     try {
       if (!store) return librarySide
       const v = await store.get('librarySide')
-      if (v === 'left' || v === 'right') {
-        librarySide = v
-        writeLibrarySideToLocalStorage(v)
-        return v
+      if (v === 'left') {
+        librarySide = 'left'
+        writeLibrarySideToLocalStorage('left')
+        return 'left'
       }
     } catch {}
     return librarySide
@@ -8278,7 +8500,7 @@ async function refreshLibraryUiAndTree(refreshTree = true) {
 
   if (!refreshTree) return
   try {
-    try { const s = await getLibrarySort(); fileTree.setSort(s) } catch {}
+    try { const s = await getLibrarySort(store); fileTree.setSort(s) } catch {}
     const treeEl = document.getElementById('lib-tree') as HTMLDivElement | null
     if (treeEl && !fileTreeReady) {
       await fileTree.init(treeEl, {
@@ -8372,7 +8594,7 @@ function applyI18nUi() {
     try {
       const themeBtn = document.getElementById('btn-theme') as HTMLDivElement | null
       if (themeBtn) {
-        themeBtn.title = t('menu.theme.tooltip')
+        themeBtn.title = '设置'
         if (!themeBtn.classList.contains('ribbon-btn')) {
           themeBtn.textContent = t('menu.theme')
         }
@@ -8383,6 +8605,10 @@ function applyI18nUi() {
         if (!pluginsBtn.classList.contains('ribbon-btn')) {
           pluginsBtn.textContent = t('menu.plugins')
         }
+      }
+      const diaryTasksBtn = document.getElementById('btn-diary-tasks') as HTMLDivElement | null
+      if (diaryTasksBtn) {
+        diaryTasksBtn.title = t('diaryTasks.open.tip')
       }
     } catch {}
     // 文件名/状态/编辑器占位
@@ -8401,9 +8627,6 @@ function applyI18nUi() {
       if (elC) elC.textContent = t('lib.choose')
       const elR = document.getElementById('lib-refresh') as HTMLButtonElement | null
       if (elR) elR.title = t('lib.refresh')
-      const elP = document.getElementById('lib-pin') as HTMLButtonElement | null
-      if (elP) elP.title = libraryDocked ? t('lib.pin.auto') : t('lib.pin.fixed')
-      updateLibrarySideButton()
     } catch {}
     // 图床设置（若已创建）
     try {
@@ -8738,7 +8961,6 @@ function bindEvents() {
 
   // 菜单项点击事件
   const btnOpen = document.getElementById('btn-open')
-  const btnMode = document.getElementById('btn-mode')
   const btnSave = document.getElementById('btn-save')
   const btnSaveas = document.getElementById('btn-saveas')
   const btnToggle = document.getElementById('btn-toggle')
@@ -8752,7 +8974,6 @@ function bindEvents() {
   const btnLang = document.getElementById('btn-lang')
 
   if (btnOpen) btnOpen.addEventListener('click', guard(() => showFileMenu()))
-  if (btnMode) btnMode.addEventListener('click', guard(() => showModeMenu()))
   if (btnLang) btnLang.addEventListener('click', guard(() => showLangMenu()))
   if (btnSave) btnSave.addEventListener('click', guard(() => saveFile()))
   if (btnSaveas) btnSaveas.addEventListener('click', guard(() => saveAs()))
@@ -9536,7 +9757,8 @@ function bindEvents() {
     exists: async (p: string) => { return await exists(p as any) },
     askOverwrite: async (msg: string) => { return await ask(msg) },
     moveFileSafe,
-    setSort: async (mode: LibSortMode) => { await setLibrarySort(mode) },
+    getCurrentSort: async () => { return await getLibrarySort(store) },
+    setSort: async (mode: LibSortMode) => { await setLibrarySort(store, mode) },
     applySortToTree: async (mode: LibSortMode) => {
       try { fileTree.setSort(mode) } catch {}
       try { await fileTree.refresh() } catch {}
@@ -9888,7 +10110,7 @@ function bindEvents() {
     let root = await getLibraryRoot()
     if (!root) root = await pickLibraryRoot()
     try { await refreshLibraryUiAndTree(false) } catch {}
-    try { const s = await getLibrarySort(); fileTree.setSort(s) } catch {}
+    try { const s = await getLibrarySort(store); fileTree.setSort(s) } catch {}
     const treeEl = document.getElementById('lib-tree') as HTMLDivElement | null
     if (treeEl && !fileTreeReady) {
       await fileTree.init(treeEl, {
@@ -9926,24 +10148,13 @@ function bindEvents() {
     }
   })()
 
-  // Ribbon 文件树切换按钮
-  const btnFiletree = document.getElementById('btn-filetree')
-  if (btnFiletree) btnFiletree.addEventListener('click', guard(async () => {
-    await toggleLibraryFileTreeFromRibbon()
-  }))
-  // 非固定模式：点击库外空白自动隐藏
-  document.addEventListener('mousedown', (ev) => {
-    try {
-      const lib = document.getElementById('library') as HTMLDivElement | null
-      if (!lib) return
-      const visible = !lib.classList.contains('hidden')
-      if (!visible) return
-      if (libraryDocked) return // 仅非固定模式
-      const t = ev.target as Node
-      if (lib && !lib.contains(t)) showLibrary(false, false)
-    } catch {}
-  }, { capture: true })
+  // 侧边栏显隐只由左下角按钮控制，不再随点击外部自动收起
   if (btnAbout) btnAbout.addEventListener('click', guard(async () => { await setAboutOverlayVisible(true) }))
+  // 检查更新入口移到关于对话框内
+  document.addEventListener('click', (ev) => {
+    const t = ev.target as HTMLElement | null
+    if (t && t.id === 'about-check-update') { void checkUpdateInteractive() }
+  })
   if (btnUploader) btnUploader.addEventListener('click', guard(() => openUploaderDialog()))
 
   // 所见模式：输入/合成结束/滚动时联动渲染与同步
@@ -10663,7 +10874,7 @@ function bindEvents() {
     const chooseBtn = document.getElementById('lib-choose') as HTMLButtonElement | null
     const refreshBtn = document.getElementById('lib-refresh') as HTMLButtonElement | null
     if (chooseBtn) chooseBtn.addEventListener('click', guard(async () => { await showLibraryMenu() }))
-  if (refreshBtn) refreshBtn.addEventListener('click', guard(async () => { try { const s = await getLibrarySort(); fileTree.setSort(s) } catch {} const treeEl = document.getElementById('lib-tree') as HTMLDivElement | null; if (treeEl && !fileTreeReady) { await fileTree.init(treeEl, { getRoot: getLibraryRoot, onOpenFile: async (p: string) => { await openFile2(p) }, onOpenNewFile: async (p: string) => { await openFile2(p); mode='edit'; preview.classList.add('hidden'); try { (editor as HTMLTextAreaElement).focus() } catch {} }, onMoved: async (src: string, dst: string) => { try { if (currentFilePath === src) { currentFilePath = dst as any; refreshTitle() } } catch {} } }); fileTreeReady = true } else if (treeEl) { await fileTree.refresh() } }))
+  if (refreshBtn) refreshBtn.addEventListener('click', guard(async () => { try { const s = await getLibrarySort(store); fileTree.setSort(s) } catch {} const treeEl = document.getElementById('lib-tree') as HTMLDivElement | null; if (treeEl && !fileTreeReady) { await fileTree.init(treeEl, { getRoot: getLibraryRoot, onOpenFile: async (p: string) => { await openFile2(p) }, onOpenNewFile: async (p: string) => { await openFile2(p); mode='edit'; preview.classList.add('hidden'); try { (editor as HTMLTextAreaElement).focus() } catch {} }, onMoved: async (src: string, dst: string) => { try { if (currentFilePath === src) { currentFilePath = dst as any; refreshTitle() } } catch {} } }); fileTreeReady = true } else if (treeEl) { await fileTree.refresh() } }))
   } catch {}
   // 监听 Tauri 文件拖放（用于直接打开 .md/.markdown/.txt 文件）
   ;(async () => {
@@ -10819,7 +11030,7 @@ function bindEvents() {
 // 启动
 (async () => {
   try {
-    console.log('flyMD (飞速MarkDown) 应用启动...')
+    console.log('FastNote 应用启动...')
     try { logInfo('打点:JS启动') } catch {}
 
     // 尝试初始化存储（确保完成后再加载扩展，避免读取不到已安装列表）
@@ -10848,16 +11059,14 @@ function bindEvents() {
     } catch {}
     await maybeAutoImportPortableBackup()
     const compact = isCompactTitlebarEnabled()
-    const [layout, side, docked] = await Promise.all([
+    const [layout, side] = await Promise.all([
       getOutlineLayout().catch(() => outlineLayout),
       getLibrarySide().catch(() => librarySide),
-      getLibraryDocked().catch(() => libraryDocked),
     ])
     const compactTitlebarTask = setCompactTitlebar(compact, store, false).catch(() => {})
     try { await syncOutlineDockFromStore() } catch {}
     try { await setOutlineLayout(layout, false) } catch {}
     try { await setLibrarySide(side, false) } catch {}
-    try { await setLibraryDocked(docked, false) } catch {}
     try { await compactTitlebarTask } catch {}
     // 开发模式：不再自动打开 DevTools，改为快捷键触发，避免干扰首屏
     // 快捷键见下方全局 keydown（F12 或 Ctrl+Shift+I）
@@ -11139,7 +11348,7 @@ function bindEvents() {
     } catch {}
 
     console.log('应用初始化完成')
-    void logInfo('flyMD (飞速MarkDown) 应用初始化完成')
+    void logInfo('FastNote 应用初始化完成')
 
     // 检查是否默认启用所见模式（便签模式下不启用，避免覆盖便签的阅读模式样式）
     try {
@@ -11286,6 +11495,22 @@ const {
   removePluginDir,
   loadAndActivateEnabledPlugins,
 } = pluginRuntime
+
+// 日记与待办（内置）：Ribbon 日历按钮（由 initDiaryTasks 自建并摆到 AI 助手下方）+ 面板。
+// 依赖插件运行时提供 xxtui 推送 API
+try {
+  initDiaryTasks({
+    getLibraryRoot: () => getLibraryRoot(),
+    openFileByPath: (p: string) => openFile2(p),
+    getXxtuiApi: () => {
+      try { return (pluginHost.getPluginAPI('xxtui-todo-push') as any) || null } catch { return null }
+    },
+    notice: (msg: string, level?: 'ok' | 'err', ms?: number) => pluginNotice(msg, level, ms),
+    confirm: (message: string, title?: string) => confirmNative(message, title),
+  })
+} catch (e) {
+  console.error('[diaryTasks] 初始化失败', e)
+}
 
 // ASP：提供给文件树使用的“额外后缀展示配置”查询入口（避免在 fileTree.ts 中直接依赖插件运行时）
 try {

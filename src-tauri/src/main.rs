@@ -13,12 +13,100 @@ use chrono::{DateTime, Utc};
 use std::time::Duration;
 use std::sync::OnceLock;
 
+// 让 Xlib 变为线程安全。WebKitGTK 的渲染线程与我们设置窗口圆角形状（gdk shape
+// region）时用到的 X 调用会并发访问同一个 X 连接；若从未调用 XInitThreads()，XCB
+// 会在 poll_for_event 处命中 `xcb_xlib_threads_sequence_lost` 断言而整体崩溃
+// （表现为启动即 Aborting）。必须在建立任何 X 连接（GTK 初始化）之前调用，
+// 因此放在 main() 的最前面。libX11 已由 GTK 传递链接，这里直接声明该符号即可。
+#[cfg(target_os = "linux")]
+fn init_x11_threads() {
+  #[link(name = "X11")]
+  extern "C" {
+    fn XInitThreads() -> std::os::raw::c_int;
+  }
+  unsafe {
+    let _ = XInitThreads();
+  }
+}
+
 #[cfg(target_os = "linux")]
 fn init_linux_render_env() {
   // Linux 默认禁用 WebKitGTK 的 DMABUF 渲染，降低白屏概率；若用户显式设置则尊重用户配置
   use std::env;
   if env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
     env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+  }
+  // wry 的窗口透明仅支持 X11（Wayland 下被忽略，圆角外露白底）。
+  // Wayland 会话中强制走 XWayland，使 transparent: true 生效；用户显式设置则尊重用户配置。
+  if env::var_os("GDK_BACKEND").is_none() {
+    env::set_var("GDK_BACKEND", "x11");
+  }
+}
+
+// ============================================================
+// Linux 原生圆角兜底
+// ------------------------------------------------------------
+// 无边框 + transparent 的圆角依赖合成器对窗口透明的支持，在 VMware / Wayland
+// 等环境常合成失败（表现为直角白底）。这里给 GTK 顶层窗口直接设置一个圆角形状
+// 区域（gdk shape region），把窗口物理裁成圆角，不再依赖透明合成，任何环境都生效。
+// 前端 CSS 仍保留（在支持合成时提供抗锯齿边缘）；形状区域半径与 CSS 一致（14px）。
+#[cfg(target_os = "linux")]
+const NT_WINDOW_RADIUS: i32 = 14;
+
+// 用一组矩形条近似出一个圆角矩形区域。
+#[cfg(target_os = "linux")]
+fn build_rounded_region(width: i32, height: i32, radius: i32) -> cairo::Region {
+  let r = radius.min(width / 2).min(height / 2).max(0);
+  let mut rects: Vec<cairo::RectangleInt> = Vec::new();
+  if r <= 0 {
+    rects.push(cairo::RectangleInt::new(0, 0, width, height));
+    return cairo::Region::create_rectangles(&rects);
+  }
+  // 中间主体：左右满宽，上下各留出 r 高度给圆角
+  rects.push(cairo::RectangleInt::new(0, r, width, height - 2 * r));
+  // 上、下圆角逐行近似（以像素中心到圆心的距离求内缩量）
+  for y in 0..r {
+    let dy = (r - y) as f64 - 0.5;
+    let dx = ((r as f64) * (r as f64) - dy * dy).max(0.0).sqrt();
+    let inset = ((r as f64) - dx).round() as i32;
+    let x = inset;
+    let w = width - 2 * inset;
+    if w > 0 {
+      rects.push(cairo::RectangleInt::new(x, y, w, 1)); // 顶部
+      rects.push(cairo::RectangleInt::new(x, height - 1 - y, w, 1)); // 底部
+    }
+  }
+  cairo::Region::create_rectangles(&rects)
+}
+
+// 依据当前窗口尺寸应用圆角形状；最大化时取消形状（直角，铺满屏幕）。
+#[cfg(target_os = "linux")]
+fn apply_round_region(gtk_win: &gtk::ApplicationWindow) {
+  use gtk::prelude::*;
+  let w = gtk_win.allocated_width();
+  let h = gtk_win.allocated_height();
+  if w <= 1 || h <= 1 {
+    return;
+  }
+  if let Some(gdk_win) = gtk_win.window() {
+    if gtk_win.is_maximized() {
+      gdk_win.shape_combine_region(None, 0, 0);
+    } else {
+      let region = build_rounded_region(w, h, NT_WINDOW_RADIUS);
+      gdk_win.shape_combine_region(Some(&region), 0, 0);
+    }
+  }
+}
+
+// 安装：首帧应用一次，并在尺寸变化（含最大化 / 还原）时重新计算圆角。
+#[cfg(target_os = "linux")]
+fn install_linux_rounded_corners(win: &tauri::WebviewWindow) {
+  use gtk::prelude::*;
+  if let Ok(gtk_win) = win.gtk_window() {
+    apply_round_region(&gtk_win);
+    gtk_win.connect_size_allocate(move |w, _alloc| {
+      apply_round_region(w);
+    });
   }
 }
 
@@ -1743,6 +1831,10 @@ async fn list_dir_any(path: String) -> Result<Vec<FlymdDirEntryLite>, String> {
 }
 
 fn main() {
+  // 必须在任何 X 连接建立之前调用，让 Xlib 线程安全（否则 WebKitGTK 渲染线程
+  // 与圆角 shape 的 X 调用竞争会触发 XCB 断言崩溃）。
+  #[cfg(target_os = "linux")]
+  init_x11_threads();
   #[cfg(target_os = "linux")]
   init_linux_render_env();
 
@@ -1776,7 +1868,7 @@ fn main() {
         true,
         Some("CmdOrCtrl+Shift+P"),
       )?;
-      let sub = Submenu::with_id_and_items(handle, "flymd.menu", "FlyMD", true, &[&cmd])?;
+      let sub = Submenu::with_id_and_items(handle, "flymd.menu", "FastNote", true, &[&cmd])?;
       menu.append_items(&[&sub])?;
       Ok(menu)
     })
@@ -1805,6 +1897,7 @@ fn main() {
         force_remove_path,
         read_text_file_any,
         write_text_file_any,
+        write_text_file_any_keep_mtime,
         list_dir_any,
       get_pending_open_path,
       http_xmlrpc_post,
@@ -1884,6 +1977,9 @@ fn main() {
         {
           let _ = win.show();
           let _ = win.set_focus();
+          // Linux：应用原生圆角形状（不依赖窗口透明合成）
+          #[cfg(target_os = "linux")]
+          install_linux_rounded_corners(&win);
         }
       }
 
@@ -2650,6 +2746,121 @@ async fn write_text_file_any(path: String, content: String) -> Result<(), String
   .map_err(|e| format!("join error: {e}"))??;
 
   Ok(())
+}
+
+// 写入任意文本文件，并把修改时间设为指定时间戳（毫秒）。
+// 用途：日记与待办按「文件名日期 → front matter → mtime」定位当天条目；
+// 若无日期文件被写在别的日子改名/改动，标记完成会刷新 mtime，条目就会从原日期
+// 跳到今天。这里在改写正文后把 mtime 还原，保证日期不漂移。
+#[tauri::command]
+async fn write_text_file_any_keep_mtime(
+  path: String,
+  content: String,
+  mtime_ms: Option<f64>,
+) -> Result<(), String> {
+  use std::fs;
+  use std::path::PathBuf;
+
+  let pathbuf = PathBuf::from(path);
+  // 后台线程写入，避免阻塞异步执行器
+  tauri::async_runtime::spawn_blocking(move || {
+    if let Some(parent) = pathbuf.parent() {
+      fs::create_dir_all(parent).map_err(|e| format!("create_dir_all error: {e}"))?;
+    }
+    fs::write(&pathbuf, content.as_bytes()).map_err(|e| format!("write error: {e}"))?;
+
+    if let Some(ms) = mtime_ms.filter(|v| v.is_finite() && *v > 0.0) {
+      let secs = (ms / 1000.0) as u64;
+      let nanos = ((ms % 1000.0) * 1_000_000.0).round() as u32;
+      let nanos = if nanos >= 1_000_000_000 { 999_999_999 } else { nanos };
+      if let Some(t) = std::time::UNIX_EPOCH.checked_add(std::time::Duration::new(secs, nanos)) {
+        // 失败不视为致命错误：内容已经写入，只是日期可能回退到 mtime
+        let _ = filetime_set_mtime(&pathbuf, t);
+      }
+    }
+    Ok::<(), String>(())
+  })
+  .await
+  .map_err(|e| format!("join error: {e}"))??;
+
+  Ok(())
+}
+
+// 设置文件修改时间（跨平台，不引入额外依赖）
+#[cfg(unix)]
+fn filetime_set_mtime(path: &std::path::Path, t: std::time::SystemTime) -> std::io::Result<()> {
+  use std::os::unix::ffi::OsStrExt;
+  let dur = t
+    .duration_since(std::time::UNIX_EPOCH)
+    .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))?;
+  let times = [
+    libc_timespec {
+      tv_sec: dur.as_secs() as i64,
+      tv_nsec: dur.subsec_nanos() as i64,
+    },
+    libc_timespec {
+      tv_sec: dur.as_secs() as i64,
+      tv_nsec: dur.subsec_nanos() as i64,
+    },
+  ];
+  let cpath = std::ffi::CString::new(path.as_os_str().as_bytes())
+    .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))?;
+  extern "C" {
+    fn utimensat(
+      dirfd: std::os::raw::c_int,
+      pathname: *const std::os::raw::c_char,
+      times: *const libc_timespec,
+      flags: std::os::raw::c_int,
+    ) -> std::os::raw::c_int;
+  }
+  #[repr(C)]
+  struct libc_timespec {
+    tv_sec: i64,
+    tv_nsec: i64,
+  }
+  // AT_FDCWD = -100：相对当前工作目录解析路径（这里传的是绝对路径）
+  let rc = unsafe { utimensat(-100, cpath.as_ptr(), times.as_ptr(), 0) };
+  if rc == 0 {
+    Ok(())
+  } else {
+    Err(std::io::Error::last_os_error())
+  }
+}
+
+#[cfg(windows)]
+fn filetime_set_mtime(path: &std::path::Path, t: std::time::SystemTime) -> std::io::Result<()> {
+  use std::os::windows::io::AsRawHandle;
+  let f = std::fs::OpenOptions::new().write(true).open(path)?;
+  let dur = t
+    .duration_since(std::time::UNIX_EPOCH)
+    .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))?;
+  // FILETIME：自 1601-01-01 起的 100ns 数
+  const EPOCH_DIFF_100NS: u64 = 116_444_736_000_000_000;
+  let ticks = EPOCH_DIFF_100NS + dur.as_secs() * 10_000_000 + (dur.subsec_nanos() as u64) / 100;
+  #[repr(C)]
+  struct FileTime {
+    low: u32,
+    high: u32,
+  }
+  let ft = FileTime {
+    low: (ticks & 0xffff_ffff) as u32,
+    high: (ticks >> 32) as u32,
+  };
+  extern "system" {
+    fn SetFileTime(
+      handle: *mut std::os::raw::c_void,
+      creation: *const FileTime,
+      access: *const FileTime,
+      write: *const FileTime,
+    ) -> std::os::raw::c_int;
+  }
+  let handle = f.as_raw_handle() as *mut std::os::raw::c_void;
+  let rc = unsafe { SetFileTime(handle, std::ptr::null(), std::ptr::null(), &ft) };
+  if rc != 0 {
+    Ok(())
+  } else {
+    Err(std::io::Error::last_os_error())
+  }
 }
 
 // 前端兜底查询：获取并清空待打开路径，避免事件竞态丢失

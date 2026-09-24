@@ -1,0 +1,651 @@
+/* 日记与待办：面板 / 编辑弹窗 / 模板设置
+   从 note-templates 扩展移植为内置功能，统一 .dt-* 前缀
+   颜色统一走主题变量，不再出现「暗色下白底」问题 */
+
+.dt-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9500;
+}
+
+.dt-dialog {
+  background: var(--bg, #fff);
+  color: var(--fg, inherit);
+  border-radius: var(--radius-xl, 12px);
+  border: 1px solid var(--border, #e5e7eb);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+  padding: 16px 20px 14px;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.dt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  font-weight: 650;
+  font-size: 14px;
+}
+
+.dt-btn {
+  padding: 5px 12px;
+  border-radius: var(--radius-md, 6px);
+  border: 1px solid var(--border, #e5e7eb);
+  background: var(--bg, #fff);
+  color: var(--fg, inherit);
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.dt-btn:hover {
+  border-color: var(--accent, #2563eb);
+  background: var(--hover-bg, rgba(127, 127, 127, 0.08));
+}
+
+.dt-btn-primary {
+  background: var(--accent, #2563eb);
+  border-color: var(--accent, #2563eb);
+  color: #fff;
+}
+
+.dt-btn-primary:hover {
+  background: var(--accent-hover, #1d4ed8);
+  border-color: var(--accent-hover, #1d4ed8);
+}
+
+.dt-btn-icon {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.dt-btn-close {
+  padding: 0 8px;
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* ===== 模板设置（设置窗口「模板」分区） ===== */
+.dt-tpl-block {
+  margin-bottom: 22px;
+}
+
+.dt-tpl-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.dt-tpl-head .dt-tpl-name {
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.dt-tpl-head .dt-tpl-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+.dt-tpl-editor {
+  width: 100%;
+  min-height: 190px;
+  resize: vertical;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border-radius: var(--radius-md, 6px);
+  border: 1px solid var(--border, #e5e7eb);
+  background: var(--bg, #fff);
+  color: var(--fg, inherit);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  outline: none;
+}
+
+.dt-tpl-editor:focus {
+  border-color: var(--accent, #2563eb);
+}
+
+.dt-tip {
+  margin-top: 6px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--muted, #6b7280);
+  white-space: pre-wrap;
+}
+
+/* ===== 面板 ===== */
+.dt-panel {
+  width: 1040px;
+  max-width: 96vw;
+  height: 680px;
+  max-height: 92vh;
+}
+
+.dt-panel-main {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  min-height: 0;
+}
+
+.dt-columns {
+  display: flex;
+  gap: 14px;
+  flex: 1;
+  min-height: 0;
+}
+
+/* 左侧：日历为主区 */
+.dt-cal-col {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 右侧：待办 / 日记 详情（固定窄栏） */
+.dt-content-col {
+  flex: 0 0 340px;
+  width: 340px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+.dt-calendar-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dt-cal-select {
+  padding: 5px 6px;
+  border-radius: var(--radius-md, 6px);
+  border: 1px solid var(--border, #e5e7eb);
+  background: var(--bg, #fff);
+  color: var(--fg, inherit);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+}
+
+.dt-cal-select:focus { border-color: var(--accent, #2563eb); }
+
+.dt-cal-btn {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md, 6px);
+  border: 1px solid var(--border, #e5e7eb);
+  background: var(--bg, #fff);
+  color: var(--fg, inherit);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0;
+}
+
+.dt-cal-btn:hover {
+  background: var(--hover-bg, rgba(127, 127, 127, 0.08));
+  border-color: var(--accent, #2563eb);
+}
+
+.dt-cal-btn-text {
+  width: auto;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dt-cal-spacer { flex: 1; }
+
+.dt-calendar {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  align-content: start;
+}
+
+.dt-calendar-weekday {
+  text-align: center;
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--muted, #6b7280);
+  padding: 2px 0 4px;
+}
+
+.dt-calendar-weekday-weekend { color: #ef7a5b; }
+
+.dt-calendar-day {
+  position: relative;
+  padding: 4px 5px 5px;
+  min-height: 84px;
+  border-radius: var(--radius-md, 6px);
+  cursor: pointer;
+  background: var(--bg, #fff);
+  border: 1px solid var(--border, #e5e7eb);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow: hidden;
+}
+
+.dt-calendar-day:hover:not(.dt-calendar-day-empty) { border-color: var(--accent, #2563eb); }
+
+.dt-calendar-day-empty {
+  cursor: default;
+  background: transparent;
+  border: none;
+  min-height: 0;
+}
+
+.dt-day-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.dt-cal-solar {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--fg, #1f2328);
+}
+
+.dt-cal-lunar {
+  font-size: 9px;
+  line-height: 1.1;
+  color: var(--muted, #9ca3af);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dt-calendar-day-weekend .dt-cal-solar { color: #ef7a5b; }
+.dt-calendar-day-festival .dt-cal-lunar,
+.dt-calendar-day-term .dt-cal-lunar { color: #dc2626; font-weight: 600; }
+
+/* 单元格里的当天条目：待办按状态着色，日记为紫色 */
+.dt-day-items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.dt-day-item {
+  font-size: 11px;
+  line-height: 1.4;
+  padding: 0 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-left: 3px solid transparent;
+}
+
+.dt-day-item-open { background: var(--accent-light, rgba(37, 99, 235, 0.12)); border-left-color: var(--accent, #2563eb); color: var(--fg, inherit); }
+.dt-day-item-done { background: rgba(22, 163, 74, 0.12); border-left-color: #16a34a; color: var(--muted, #6b7280); text-decoration: line-through; }
+.dt-day-item-overdue { background: rgba(220, 38, 38, 0.12); border-left-color: #dc2626; color: #dc2626; }
+.dt-day-item-diary { background: rgba(168, 85, 247, 0.12); border-left-color: #a855f7; color: var(--fg, inherit); }
+
+.dt-day-more {
+  font-size: 10px;
+  color: var(--muted, #6b7280);
+  padding: 0 2px;
+}
+
+.dt-calendar-day-today {
+  border-color: var(--accent, #2563eb);
+  box-shadow: inset 0 0 0 1px var(--accent, #2563eb);
+}
+
+/* 选中：强调边框 + 轻底色（不用实心填充，避免盖住条目文字） */
+.dt-calendar-day-selected {
+  border-color: var(--accent, #2563eb);
+  background: var(--accent-light, rgba(37, 99, 235, 0.12));
+  box-shadow: inset 0 0 0 1px var(--accent, #2563eb);
+}
+
+.dt-calendar-day-selected .dt-cal-solar { color: var(--accent, #2563eb); }
+
+.dt-cal-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--muted, #6b7280);
+}
+
+.dt-cal-legend span { display: inline-flex; align-items: center; gap: 4px; }
+
+.dt-cal-legend i {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+.dt-legend-open { background: var(--accent, #2563eb); }
+.dt-legend-done { background: #16a34a; }
+.dt-legend-overdue { background: #dc2626; }
+.dt-legend-note { background: #a855f7; }
+
+.dt-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border, #e5e7eb);
+  flex: 0 0 auto;
+}
+
+.dt-tab {
+  padding: 6px 16px;
+  border: none;
+  background: transparent;
+  color: var(--muted, #6b7280);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.dt-tab:hover { color: var(--fg, inherit); }
+.dt-tab-active { color: var(--accent, #2563eb); border-bottom-color: var(--accent, #2563eb); }
+
+.dt-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.dt-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.dt-toolbar select,
+.dt-toolbar input[type="text"] {
+  font-size: 12px;
+  padding: 5px 8px;
+  border-radius: var(--radius-md, 6px);
+  border: 1px solid var(--border, #e5e7eb);
+  background: var(--bg, #fff);
+  color: var(--fg, inherit);
+  outline: none;
+}
+
+.dt-toolbar select:focus,
+.dt-toolbar input[type="text"]:focus { border-color: var(--accent, #2563eb); }
+
+.dt-toolbar input[type="text"] { flex: 1; min-width: 120px; }
+
+.dt-select-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.dt-scope {
+  font-size: 12px;
+  color: var(--muted, #6b7280);
+  flex: 0 0 auto;
+}
+
+.dt-list-wrap {
+  flex: 1;
+  border-radius: var(--radius-md, 6px);
+  border: 1px solid var(--border, #e5e7eb);
+  overflow: auto;
+  background: var(--bg, #fff);
+  min-height: 0;
+}
+
+.dt-todo-list { display: flex; flex-direction: column; }
+
+.dt-todo-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border, #eee);
+  border-left: 3px solid transparent;
+}
+
+.dt-todo-item:hover { background: var(--hover-bg, rgba(127, 127, 127, 0.06)); }
+.dt-todo-open { border-left-color: var(--accent, #2563eb); }
+.dt-todo-done { border-left-color: #16a34a; }
+.dt-todo-overdue { border-left-color: #dc2626; }
+.dt-todo-check { margin-top: 2px; flex: 0 0 auto; }
+
+.dt-todo-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dt-todo-text {
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--fg, inherit);
+  overflow-wrap: anywhere;
+}
+
+.dt-todo-text-done { text-decoration: line-through; color: var(--muted, #9ca3af); }
+
+.dt-todo-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted, #6b7280);
+}
+
+.dt-todo-date { color: var(--muted, #6b7280); }
+
+.dt-title-link {
+  color: var(--accent, #2563eb);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.dt-title-link:hover { text-decoration: underline; }
+
+.dt-empty {
+  padding: 28px 18px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted, #6b7280);
+}
+
+.dt-badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.dt-badge-open { background: rgba(37, 99, 235, 0.12); color: #2563eb; }
+.dt-badge-done { background: rgba(22, 163, 74, 0.14); color: #16a34a; }
+.dt-badge-overdue { background: rgba(220, 38, 38, 0.14); color: #dc2626; }
+
+.dt-note-list {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dt-note-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  border-radius: var(--radius-md, 6px);
+  border: 1px solid var(--border, #e5e7eb);
+  background: var(--bg, #fff);
+  cursor: pointer;
+}
+
+.dt-note-item:hover {
+  border-color: var(--accent, #2563eb);
+  background: var(--hover-bg, rgba(127, 127, 127, 0.06));
+}
+
+.dt-note-date {
+  font-size: 12px;
+  font-weight: 700;
+  color: #a855f7;
+  flex: 0 0 auto;
+  min-width: 84px;
+}
+
+.dt-note-title {
+  font-size: 13px;
+  color: var(--fg, inherit);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dt-panel-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.dt-footer-info {
+  font-size: 12px;
+  color: var(--muted, #6b7280);
+  margin-right: auto;
+}
+
+/* ===== 新建 / 编辑弹窗 ===== */
+.dt-editor {
+  width: 760px;
+  max-width: 94vw;
+  height: 620px;
+  max-height: 90vh;
+}
+
+.dt-editor-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex: 0 0 auto;
+}
+
+/* 日期只读展示：日期由日历选中决定，避免在弹窗里改日期造成内容写到别的文件 */
+.dt-editor-date {
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border, #e5e7eb);
+  background: var(--accent-light, rgba(37, 99, 235, 0.12));
+  color: var(--accent, #2563eb);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.dt-editor-file {
+  font-size: 11px;
+  color: var(--muted, #6b7280);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dt-editor-text {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  box-sizing: border-box;
+  resize: none;
+  padding: 10px 12px;
+  border-radius: var(--radius-md, 6px);
+  border: 1px solid var(--border, #e5e7eb);
+  background: var(--bg, #fff);
+  color: var(--fg, inherit);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  outline: none;
+}
+
+.dt-editor-text:focus { border-color: var(--accent, #2563eb); }
+
+.dt-editor-hint {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--muted, #6b7280);
+  flex: 0 0 auto;
+  overflow-wrap: anywhere;
+}
+
+.dt-editor-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+  flex: 0 0 auto;
+}
+
+/* 移动端：单列堆叠 + 放大点击区 */
+@media (max-width: 600px) {
+  .dt-panel { width: 95vw !important; max-width: 95vw !important; height: 92vh !important; padding: 12px 14px; }
+  .dt-editor { width: 95vw !important; max-width: 95vw !important; height: 90vh !important; padding: 12px 14px; }
+  .dt-columns { flex-direction: column; }
+  .dt-cal-col { width: 100%; flex: 0 0 auto; }
+  .dt-content-col { width: 100%; flex: 0 0 auto; min-height: 220px; }
+  .dt-calendar { gap: 2px; }
+  .dt-calendar-day { min-height: 60px; padding: 3px; gap: 2px; }
+  .dt-toolbar { flex-direction: column; align-items: stretch; }
+  .dt-toolbar select,
+  .dt-toolbar input[type="text"] { width: 100%; font-size: 16px; padding: 6px 10px; }
+}

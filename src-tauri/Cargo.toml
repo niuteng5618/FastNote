@@ -1,7 +1,7 @@
 [package]
 name = "flymd"
-version = "1.4.4"
-description = "飞速 Markdown 编辑器"
+version = "1.0.0"
+description = "FastNote 轻量笔记"
 authors = ["flymd"]
 edition = "2021"
 rust-version = "1.70"
@@ -34,6 +34,14 @@ futures-util = "0.3"
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.58", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }
+
+# Linux 原生圆角兜底：直接给 GTK 窗口设置圆角形状区域（shape region），
+# 不依赖窗口透明合成，Wayland/XWayland/VM 下也能显示圆角。
+# 版本与 tauri 2 已锁定的传递依赖一致（见 Cargo.lock），不会引入新的解析。
+[target.'cfg(target_os = "linux")'.dependencies]
+gtk = "0.18"
+gdk = "0.18"
+cairo-rs = "0.18"
 
 [profile.release]
 # 说明：release 配置优先减小体积和启动时间，后续不要随意改动以免引入性能回退

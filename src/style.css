@@ -854,6 +854,7 @@ body.compact-titlebar .window-btn.window-close:hover {
   --workspace-left-gap: calc(var(--gap-left-library) + var(--gap-left-outline) + var(--dock-left-gap));
   --workspace-right-gap: calc(var(--gap-right-library) + var(--gap-right-outline) + var(--dock-right-gap));
   --workspace-bottom-gap: var(--dock-bottom-gap);
+  transition: --gap-left-library .32s ease, --gap-right-library .32s ease;
   flex: 1; /* 在flex布局中填充剩余空间 */
   min-height: 0; /* 允许flex子元素正确收缩和滚动 */
   height: calc(100% - 36px);
@@ -1687,8 +1688,8 @@ body > .block-menu { display: none !important; }
     overflow-y: auto;
   overflow-x: hidden;
   z-index: 15;
-  /* 强制阻止网格背景图案，确保库侧栏在任何情况下都只显示纯色背景 */
   background-image: none !important;
+  transition: transform .32s ease, opacity .32s ease !important;
 }
 .library.side-left {
   left: 0;
@@ -2293,7 +2294,114 @@ body.focus-mode .lib-float-toggle.show { display: flex; }
   border-radius: var(--radius-sm);
 }
 
-/* 阅读模式和所见模式下隐藏状态栏 */
+/* 左下角模式按钮：点击向上弹出三种模式，当前模式打点标识 */
+.mode-switch {
+  position: absolute;
+  left: calc(var(--workspace-left-gap, 0px) + 14px);
+  right: auto;
+  bottom: 14px;
+  z-index: 40;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+  transition: left .32s ease, right .32s ease;
+}
+.container.with-library-right .mode-switch {
+  left: auto;
+  right: calc(var(--workspace-right-gap, 0px) + 14px);
+}
+.mode-switch > .ribbon-btn {
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+}
+.mode-switch > .ribbon-btn:hover { background: rgba(127,127,127,0.16); }
+.mode-pop {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 8px);
+  min-width: 168px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.18);
+  transform-origin: bottom left;
+  animation: mode-pop-in .16s ease;
+}
+.mode-pop[hidden] { display: none; }
+@keyframes mode-pop-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+.mode-pop button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--fg);
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  padding: 6px 8px;
+  cursor: pointer;
+  text-align: left;
+}
+.mode-pop button:hover { background: var(--active-bg); }
+.mode-pop .mode-mark { width: 8px; height: 8px; border-radius: 50%; background: transparent; border: 1px solid var(--border); flex: none; }
+.mode-pop button.active .mode-mark { background: var(--accent, #2563eb); border-color: transparent; }
+.mode-pop button.active { font-weight: 650; }
+.mode-pop .mode-accel { margin-left: auto; font-size: 11px; color: var(--muted); }
+
+.about-header { display: flex; align-items: center; gap: 12px; }
+.about-header #about-title { margin-right: auto; }
+.about-update-btn {
+  margin-top: 4px;
+  padding: 6px 18px;
+  font-size: 13px;
+  color: var(--fg);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.about-update-btn:hover { background: var(--active-bg); }
+.container .editor-shell,
+.container .preview,
+.container #md-wysiwyg-root { animation: mode-fade .18s ease; }
+@keyframes mode-fade { from { opacity: .35; } to { opacity: 1; } }
+
+/* 源码模式：标题行按级别着色 */
+.editor-heading-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  overflow: hidden;
+}
+.editor-heading-overlay .hl-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  white-space: pre;
+  overflow: hidden;
+}
+.editor-heading-overlay .h1 { color: #b45309; font-weight: 700; }
+.editor-heading-overlay .h2 { color: #0369a1; font-weight: 700; }
+.editor-heading-overlay .h3 { color: #047857; font-weight: 600; }
+.editor-heading-overlay .h4,
+.editor-heading-overlay .h5,
+.editor-heading-overlay .h6 { color: #6d28d9; font-weight: 600; }
+body.dark .editor-heading-overlay .h1,
+.container.dark .editor-heading-overlay .h1 { color: #fbbf24; }
+body.dark .editor-heading-overlay .h2 { color: #7dd3fc; }
+body.dark .editor-heading-overlay .h3 { color: #6ee7b7; }
+body.dark .editor-heading-overlay .h4,
+body.dark .editor-heading-overlay .h5,
+body.dark .editor-heading-overlay .h6 { color: #c4b5fd; }
 .container.wysiwyg-v2 .statusbar,
 .preview:not(.hidden) ~ .statusbar {
   display: none;
@@ -3963,10 +4071,10 @@ body.sticky-note-mode .width-bubble {
 .about-links a:hover { text-decoration: underline; }
 
 /* 插入链接 对话框 */
-.link-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; z-index: 60; }
+.link-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; z-index: 10010; }
 .link-overlay.hidden { display: none; }
 /* 重命名对话框需要覆盖在“库设置”等 upl-overlay 之上 */
-#rename-overlay { z-index: 80; }
+#rename-overlay { z-index: 10030; }
 .link-dialog { width: 420px; max-width: calc(100% - 40px); background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: var(--radius-sm); box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
 .link-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--border); font-weight: 600; font-size: 14px; }
 .link-body { padding: 14px 16px 16px 16px; }
@@ -4159,7 +4267,9 @@ body.sticky-note-mode .width-bubble {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 65;
+  /* 必须高于设置窗口(10000)：图床 / WebDAV / 同步日志等弹窗都能从设置面板里打开，
+     低于设置窗口时会“弹到最底下”，要关掉设置才看得见。 */
+  z-index: 10020;
   animation: upl-overlay-fadein 0.2s ease-out;
 }
 .upl-overlay.hidden { display: none; }
@@ -6364,6 +6474,11 @@ textarea:focus {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+  /* 侧边栏的展开收起和正文让位保留过渡，不受减少动画影响 */
+  .library,
+  .container {
+    transition-duration: .32s !important;
   }
 }
 /* WYSIWYG：单换行视觉一致性（方案A：UI 层） */
@@ -8820,3 +8935,114 @@ body.no-native-decorations.window-maximized .window-resize-handle {
   outline: none !important;
   box-shadow: none !important;
 }
+
+/* 设置窗口：左菜单 + 右内容 */
+.settings-overlay { position: fixed; inset: 0; z-index: 10000; background: rgba(0,0,0,.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; }
+.settings-overlay.hidden { display: none; }
+.settings-dialog { width: min(920px, 92vw); height: min(640px, 88vh); background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 16px 48px rgba(0,0,0,.3); display: flex; overflow: hidden; }
+.settings-nav { width: 180px; flex: none; background: var(--chrome-panel-bg, var(--panel-bg)); border-right: 1px solid var(--border); padding: 18px 10px; display: flex; flex-direction: column; gap: 2px; }
+.settings-nav-title { font-size: 15px; font-weight: 650; padding: 4px 10px 12px; }
+.settings-nav-item { text-align: left; font-size: 13px; color: var(--fg); background: transparent; border: 0; border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+.settings-nav-item:hover { background: rgba(127,127,127,.12); }
+.settings-nav-item.active { background: var(--active-bg); font-weight: 650; }
+.settings-main { flex: 1; min-width: 0; position: relative; display: flex; }
+.settings-close { position: absolute; top: 10px; right: 12px; z-index: 2; width: 28px; height: 28px; border: 0; border-radius: 8px; background: transparent; color: var(--fg); font-size: 18px; cursor: pointer; }
+.settings-close:hover { background: rgba(127,127,127,.16); }
+.settings-content { flex: 1; overflow: auto; padding: 22px 26px; }
+.settings-section-title { font-size: 16px; font-weight: 650; margin-bottom: 14px; }
+.settings-lang-list { display: flex; flex-direction: column; gap: 4px; max-width: 320px; }
+.settings-lang-item { display: flex; align-items: center; gap: 10px; text-align: left; font-size: 14px; color: var(--fg); background: transparent; border: 1px solid transparent; border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+.settings-lang-item:hover { background: rgba(127,127,127,.1); }
+.settings-lang-mark { width: 8px; height: 8px; border-radius: 50%; border: 1px solid var(--border); flex: none; }
+.settings-lang-item.active .settings-lang-mark { background: var(--accent, #2563eb); border-color: transparent; }
+.settings-content .theme-panel { position: static !important; display: block !important; width: auto; max-height: none; height: auto; box-shadow: none; border: 0; background: transparent; }
+.settings-content #extensions-overlay { position: static; display: block; background: transparent; inset: auto; }
+.settings-content .ext-overlay { position: static; background: transparent; }
+.settings-content #about-overlay { position: static; display: block; background: transparent; }
+.settings-content .about-dialog { width: auto; max-width: none; box-shadow: none; border: 0; background: transparent; }
+/* 面板搬进设置区后，去掉原先作为独立弹窗的定位 */
+.settings-content .theme-panel { position: static !important; top: auto !important; left: auto !important; right: auto !important; bottom: auto !important; transform: none !important; width: 100% !important; max-height: none !important; z-index: auto !important; box-shadow: none !important; border: 0 !important; background: transparent !important; }
+.settings-content .theme-panel-header { display: none; }
+.settings-content #about-overlay { position: static !important; inset: auto !important; display: block !important; background: transparent !important; z-index: auto !important; animation: none !important; backdrop-filter: none !important; }
+.settings-content .about-overlay { position: static !important; inset: auto !important; display: block !important; background: transparent !important; z-index: auto !important; animation: none !important; backdrop-filter: none !important; }
+.settings-content .about-dialog { width: 100% !important; max-height: none !important; overflow: visible !important; }
+.settings-content .about-header { display: flex !important; }
+.settings-content .ext-dialog { position: static !important; width: 100% !important; max-width: none !important; max-height: none !important; height: auto !important; transform: none !important; box-shadow: none !important; border: 0 !important; background: transparent !important; }
+.settings-content .ext-header .ext-close { display: none; }
+/* 扩展外壳只承担挂载职责，不再作为全屏弹窗显示（对话框常驻设置区内） */
+body > #extensions-overlay { display: none !important; }
+/* 关于自带关闭按钮与设置窗口的重复，隐藏 */
+.settings-content .about-close { display: none !important; }
+/* ===== 设置窗口加大、圆角全局化、扩展工具条布局修复 ===== */
+.settings-dialog { width: min(1160px, 94vw); height: min(800px, 92vh); border-radius: 16px; }
+.settings-nav { border-top-left-radius: 16px; border-bottom-left-radius: 16px; }
+
+/* 扩展管理工具条：允许换行，子项不再被压成竖排文字 */
+.settings-content .ext-subtitle { flex-wrap: wrap; row-gap: 8px; column-gap: 10px; }
+.settings-content .ext-subtitle > * { flex: none; }
+.settings-content .ext-market-channel { margin-left: 0; }
+.settings-content .ext-market-channel-select { min-width: 96px; max-width: 140px; height: 28px; }
+.settings-content .ext-subtitle .btn { flex: none; }
+.settings-content .ext-body { max-height: none; }
+
+/* 全局圆角：直角变圆角 */
+:root {
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+}
+/* 外框圆角需要原生透明窗口配合；Linux 的平台配置也必须启用 transparent。
+ * 在 body 裁剪可同时覆盖挂到 body 的浮层、fixed 标题栏与插件面板。
+ * 不裁剪 html，避免改变 fixed 元素的包含块。Windows 保留合成层兜底底色。 */
+body.platform-linux {
+  background: transparent;
+}
+body.platform-linux,
+body.platform-windows {
+  --window-radius: 14px;
+  clip-path: inset(0 round var(--window-radius));
+}
+body.platform-linux #app,
+body.platform-windows #app {
+  border-radius: var(--window-radius);
+}
+body.window-maximized {
+  --window-radius: 0px;
+  padding: 0;
+}
+body.window-maximized #app {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* ===== 扩展卡片自适应：不再固定 3 列，窄了自动减列 ===== */
+.ext-list { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+.ext-item { min-width: 0; overflow: hidden; }
+.ext-item .ext-name { min-width: 0; overflow-wrap: anywhere; }
+.ext-item .ext-desc { min-width: 0; overflow-wrap: anywhere; }
+.ext-item .ext-actions { flex-wrap: wrap; gap: 6px; }
+
+/* 分类/渠道下拉：加高、去窄限制，选项不再被裁 */
+.settings-content .ext-market-channel-select { min-width: 110px; max-width: none; height: 30px; padding: 0 8px; }
+/* ===== 缩小窗口时设置内容自适应，不遮挡不溢出 ===== */
+.settings-content { overflow-x: hidden; }
+
+/* 主题面板：窗口变窄时从两栏变一栏，控件不再互相挤压 */
+@media (max-width: 1080px) {
+  .settings-content .theme-panel-content { grid-template-columns: 1fr; }
+}
+
+/* 扩展卡片：更窄时降最小宽度直至单列 */
+@media (max-width: 1080px) {
+  .settings-content .ext-list { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
+  .settings-content .ext-item .ext-actions button { padding: 4px 10px; font-size: 12px; }
+}
+@media (max-width: 760px) {
+  .settings-content .ext-list { grid-template-columns: 1fr; }
+  .settings-dialog { width: 96vw; height: 94vh; }
+  .settings-nav { width: 120px; }
+}
+
+/* 关于快捷键表：窄窗口时横向可滚，不挤压 */
+.settings-content .about-sc-table { display: block; overflow-x: auto; white-space: nowrap; }

@@ -2,12 +2,23 @@ name: Build Multi-Platform
 
 on:
   workflow_dispatch:
+    inputs:
+      linux:
+        description: '同时编译 Linux'
+        type: boolean
+        default: false
+      macos:
+        description: '同时编译 macOS'
+        type: boolean
+        default: false
   push:
     tags:
       - 'v*'
 
 jobs:
   build:
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
@@ -18,11 +29,14 @@ jobs:
           - platform: ubuntu-22.04
             os: Linux
             arch: x64
+            extra: ${{ github.event_name == 'workflow_dispatch' && inputs.linux }}
           - platform: macos-14
             os: macOS
             arch: universal
+            extra: ${{ github.event_name == 'workflow_dispatch' && inputs.macos }}
 
     runs-on: ${{ matrix.platform }}
+    if: matrix.extra != false
 
     steps:
       - name: Checkout
@@ -94,10 +108,10 @@ jobs:
       - name: Zip .app for convenience (macOS)
         if: startsWith(matrix.platform, 'macos-')
         run: |
-          APP_DIR="src-tauri/target/universal-apple-darwin/release/bundle/macos/flymd.app"
+          APP_DIR="src-tauri/target/universal-apple-darwin/release/bundle/macos/FastNote.app"
           OUT_DIR="src-tauri/target/universal-apple-darwin/release/bundle/macos"
           if [ -d "$APP_DIR" ]; then
-            (cd "$OUT_DIR" && zip -qry flymd_${{ matrix.arch }}.app.zip flymd.app)
+            (cd "$OUT_DIR" && zip -qry FastNote_${{ matrix.arch }}.app.zip FastNote.app)
           fi
       - name: Build DMG (macOS Universal, with fallback)
         if: startsWith(matrix.platform, 'macos-')
@@ -106,7 +120,7 @@ jobs:
           TAURI_BUNDLER_TARGET: universal-apple-darwin
         run: |
           set -e
-          APP_DIR="src-tauri/target/universal-apple-darwin/release/bundle/macos/flymd.app"
+          APP_DIR="src-tauri/target/universal-apple-darwin/release/bundle/macos/FastNote.app"
           DMG_DIR="src-tauri/target/universal-apple-darwin/release/bundle/dmg"
           mkdir -p "$DMG_DIR"
           echo "== Try tauri bundler (dmg) =="
@@ -115,14 +129,14 @@ jobs:
           else
             echo "::warning::Tauri DMG failed. Fallback to create-dmg"
             brew list create-dmg >/dev/null 2>&1 || brew install create-dmg
-            OUT_DMG="$DMG_DIR/flymd_${{ matrix.arch }}.dmg"
+            OUT_DMG="$DMG_DIR/FastNote_${{ matrix.arch }}.dmg"
             if [ ! -d "$APP_DIR" ]; then
               echo "::error::App not found for DMG fallback: $APP_DIR"
               exit 1
             fi
             rm -f "$OUT_DMG"
-            create-dmg --dmg-title "flymd" --volname "flymd" --icon-size 128 \
-              --app-drop-link 480 180 --icon "flymd.app" 160 180 \
+            create-dmg --dmg-title "FastNote" --volname "FastNote" --icon-size 128 \
+              --app-drop-link 480 180 --icon "FastNote.app" 160 180 \
               "$OUT_DMG" "$APP_DIR" || { echo "::error::Fallback create-dmg failed"; ls -la "$DMG_DIR"; exit 1; }
           fi
       - name: Upload DMG workdir on failure
@@ -143,11 +157,11 @@ jobs:
         if: matrix.os == 'Windows'
         shell: pwsh
         run: |
-          $exe = "src-tauri/target/release/flymd.exe"
+          $exe = "src-tauri/target/release/FastNote.exe"
           if (!(Test-Path $exe)) { throw "portable: exe not found: $exe" }
           $outDir = "src-tauri/target/release/bundle/portable"
           New-Item -ItemType Directory -Force -Path $outDir | Out-Null
-          $zip = Join-Path $outDir "flymd_portable_${{ matrix.arch }}.zip"
+          $zip = Join-Path $outDir "FastNote_portable_${{ matrix.arch }}.zip"
           if (Test-Path $zip) { Remove-Item $zip -Force }
           Compress-Archive -Path $exe -DestinationPath $zip -Force
 
@@ -155,7 +169,7 @@ jobs:
         if: matrix.os == 'Windows'
         uses: actions/upload-artifact@v4
         with:
-          name: flymd-${{ matrix.os }}-${{ matrix.arch }}-portable
+          name: FastNote-${{ matrix.os }}-${{ matrix.arch }}-portable
           path: src-tauri/target/release/bundle/portable/*.zip
           if-no-files-found: error
 
@@ -163,7 +177,7 @@ jobs:
         if: matrix.os == 'Windows'
         uses: actions/upload-artifact@v4
         with:
-          name: flymd-${{ matrix.os }}-${{ matrix.arch }}
+          name: FastNote-${{ matrix.os }}-${{ matrix.arch }}
           path: |
             src-tauri/target/release/bundle/nsis/*.exe
           if-no-files-found: error
@@ -172,7 +186,7 @@ jobs:
         if: matrix.platform == 'ubuntu-22.04'
         uses: actions/upload-artifact@v4
         with:
-          name: flymd-${{ matrix.os }}-${{ matrix.arch }}
+          name: FastNote-${{ matrix.os }}-${{ matrix.arch }}
           path: |
             src-tauri/target/release/bundle/deb/*.deb
             src-tauri/target/release/bundle/appimage/*.AppImage
@@ -182,7 +196,7 @@ jobs:
         if: startsWith(matrix.platform, 'macos-')
         uses: actions/upload-artifact@v4
         with:
-          name: flymd-${{ matrix.os }}-${{ matrix.arch }}
+          name: FastNote-${{ matrix.os }}-${{ matrix.arch }}
           path: |
             src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
             src-tauri/target/universal-apple-darwin/release/bundle/macos/*.app.zip
@@ -201,10 +215,10 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            flymd-Windows-x64/**/*
-            flymd-Windows-x64-portable/**/*
-            flymd-Linux-x64/**/*
-            flymd-macOS-universal/**/*
+            FastNote-Windows-x64/**/*
+            FastNote-Windows-x64-portable/**/*
+            FastNote-Linux-x64/**/*
+            FastNote-macOS-universal/**/*
           draft: true
           generate_release_notes: true
 

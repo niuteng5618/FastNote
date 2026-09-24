@@ -18,6 +18,11 @@ function isWindowsPlatform(): boolean {
   return platform.includes('win')
 }
 
+function supportsTransparentEditorWindow(): boolean {
+  const platform = (navigator.platform || '').toLowerCase()
+  return platform.includes('win') || platform.includes('linux')
+}
+
 export function isEditorWindowLabel(label: string): boolean {
   // 主窗口固定为 main；同进程新开的编辑器窗口统一用 main- 前缀
   return label === 'main' || label.startsWith('main-')
@@ -82,7 +87,7 @@ export async function createEditorWebviewWindow(
     const label =
       'main-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8)
     const url = opts?.url || 'index.html'
-    const title = opts?.title || '飞速MarkDown'
+    const title = opts?.title || 'FastNote'
     const width = typeof opts?.width === 'number' ? opts!.width : 960
     const height = typeof opts?.height === 'number' ? opts!.height : 640
 
@@ -93,7 +98,7 @@ export async function createEditorWebviewWindow(
       height,
       resizable: true,
       decorations: false,
-      transparent: isWindowsPlatform(),
+      transparent: supportsTransparentEditorWindow(),
       shadow: !isWindowsPlatform(),
       x: typeof opts?.x === 'number' ? opts!.x : undefined,
       y: typeof opts?.y === 'number' ? opts!.y : undefined,

@@ -42,7 +42,7 @@ const state = {
   selectedIsDir: false,
   watching: false,
   unwatch: null as null | (() => void),
-  sortMode: 'name_asc' as 'name_asc' | 'name_desc' | 'mtime_asc' | 'mtime_desc',
+  sortMode: 'mtime_asc' as 'name_asc' | 'name_desc' | 'mtime_asc' | 'mtime_desc',
   currentRoot: null as string | null,
   // ASP：后缀展示配置与 allow-set 缓存（仅在 refresh/render 时更新）
   additionalSuffixMeta: null as Record<string, FileTreeAdditionalSuffixMeta> | null,
@@ -524,7 +524,7 @@ async function listDir(root: string, dir: string): Promise<{ name: string; path:
   else if (state.sortMode === 'name_desc') { dirs.sort(dirManualFirst(byNameDesc)); items.sort(pdfGrouped(byNameDesc)) }
   else if (state.sortMode === 'mtime_asc') { dirs.sort(dirManualFirst(byMtimeAsc)); items.sort(pdfGrouped(byMtimeAsc)) }
   else if (state.sortMode === 'mtime_desc') { dirs.sort(dirManualFirst(byMtimeDesc)); items.sort(pdfGrouped(byMtimeDesc)) }
-  else { dirs.sort(dirManualFirst(byNameAsc)); items.sort(pdfGrouped(byNameAsc)) }
+  else { dirs.sort(dirManualFirst(byMtimeAsc)); items.sort(pdfGrouped(byMtimeAsc)) }
   return [...dirs, ...items]
 }
 

@@ -1,6 +1,6 @@
 {
-  "name": "flymd",
-  "version": "1.4.4",
+  "name": "fastnote",
+  "version": "1.0.0",
   "private": true,
   "license": "LicenseRef-flyMD-NC-1.0",
   "type": "module",

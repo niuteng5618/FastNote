@@ -35,6 +35,7 @@ export type LibraryContextMenuDeps = {
   exists(path: string): Promise<boolean>
   askOverwrite(msg: string): Promise<boolean>
   moveFileSafe(src: string, dst: string): Promise<void>
+  getCurrentSort(): Promise<LibSortMode>
   setSort(mode: LibSortMode): Promise<void>
   applySortToTree(mode: LibSortMode): Promise<void>
   clearFolderOrderForParent(path: string): Promise<void>
@@ -44,13 +45,16 @@ export type LibraryContextMenuDeps = {
 let _libCtxKeyHandler: ((e: KeyboardEvent) => void) | null = null
 
 export function initLibraryContextMenu(deps: LibraryContextMenuDeps): void {
-  document.addEventListener('contextmenu', (ev) => {
+  document.addEventListener('contextmenu', async (ev) => {
     const target = ev.target as HTMLElement
     const row = target?.closest?.('.lib-node') as HTMLElement | null
     if (!row) return
     const tree = document.getElementById('lib-tree') as HTMLDivElement | null
     if (!tree || !tree.contains(row)) return
     ev.preventDefault()
+    // 读取当前排序模式，用于渲染排序项的正序/倒序状态（点击即切换）
+    let curSort: LibSortMode
+    try { curSort = await deps.getCurrentSort() } catch { curSort = 'mtime_asc' }
     const path = (row as any).dataset?.path as string || ''
     const isDir = row.classList.contains('lib-dir')
 
@@ -70,9 +74,10 @@ export function initLibraryContextMenu(deps: LibraryContextMenuDeps): void {
       document.body.appendChild(menu)
     }
 
-    const mkItem = (txt: string, act: () => void) => {
+    const mkItem = (txt: string, act: () => void, color?: string) => {
       const a = document.createElement('div') as HTMLDivElement
       a.textContent = txt
+      if (color) a.style.color = color
       a.style.padding = '8px 12px'
       a.style.cursor = 'pointer'
       a.addEventListener('mouseenter', () => { a.style.background = 'rgba(127,127,127,0.12)' })
@@ -194,7 +199,7 @@ export function initLibraryContextMenu(deps: LibraryContextMenuDeps): void {
       menu.appendChild(mkItem(t('ctx.newFolder'), async () => {
         try {
           // 1. 先弹出命名对话框
-          const defaultName = '新建文件夹'
+          const defaultName = '新建目录'
           const newName = await openRenameDialog(defaultName, '')
 
           // 2. 用户取消则直接返回
@@ -294,30 +299,34 @@ export function initLibraryContextMenu(deps: LibraryContextMenuDeps): void {
     }
 
     menu.appendChild(mkItem(t('ctx.rename'), () => { void doRename() }))
-    menu.appendChild(mkItem(t('ctx.delete'), () => { void doDelete() }))
+    menu.appendChild(mkItem(t('ctx.delete'), () => { void doDelete() }, '#ef4444'))
 
     try {
       const sep = document.createElement('div') as HTMLDivElement
       sep.style.borderTop = '1px solid ' + (getComputedStyle(document.documentElement).getPropertyValue('--border') || '#e5e7eb')
       sep.style.margin = '6px 0'
       menu.appendChild(sep)
+      // 排序：仅两个入口，点击在正序/倒序间切换（菜单上不显示方向）。
+      // 应用排序时顺带清除该文件夹的手动拖拽顺序（替代原「恢复当前文件夹排序」），
+      // 否则拖拽过的文件夹永远优先于全局排序，切换看起来「不生效」。
       const applySort = async (mode: LibSortMode) => {
         await deps.setSort(mode)
         await deps.applySortToTree(mode)
+        try {
+          const parent = isDir ? path : path.replace(/[\\/][^\\/]*$/, '')
+          if (parent) await deps.clearFolderOrderForParent(parent)
+        } catch {}
       }
-      menu.appendChild(mkItem(t('ctx.sortNameAsc'), () => { void applySort('name_asc') }))
-      menu.appendChild(mkItem(t('ctx.sortNameDesc'), () => { void applySort('name_desc') }))
-      menu.appendChild(mkItem(t('ctx.sortTimeDesc'), () => { void applySort('mtime_desc') }))
-      menu.appendChild(mkItem(t('ctx.sortTimeAsc'), () => { void applySort('mtime_asc') }))
-
-      if (isDir) {
-        menu.appendChild(mkItem('恢复当前文件夹排序', async () => {
-          try {
-            await deps.clearFolderOrderForParent(path)
-            await deps.refreshTree()
-          } catch {}
-        }))
-      }
+      menu.appendChild(mkItem(t('ctx.sortByName'), () => {
+        const next: LibSortMode = (curSort === 'name_asc') ? 'name_desc'
+          : (curSort === 'name_desc') ? 'name_asc' : 'name_asc'
+        void applySort(next)
+      }))
+      menu.appendChild(mkItem(t('ctx.sortByTime'), () => {
+        const next: LibSortMode = (curSort === 'mtime_asc') ? 'mtime_desc'
+          : (curSort === 'mtime_desc') ? 'mtime_asc' : 'mtime_asc'
+        void applySort(next)
+      }))
     } catch {}
 
     // 先临时展示再根据实际尺寸计算位置，避免菜单在窗口底部被截断

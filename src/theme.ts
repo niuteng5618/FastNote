@@ -904,7 +904,7 @@ function fillSwatches(panel: HTMLElement, prefs: ThemePrefs) {
   if (gridToggle) gridToggle.checked = !!prefs.gridBackground
 }
 
-function ensureThemePanelReady(): HTMLDivElement | null {
+export function ensureThemePanelReady(): HTMLDivElement | null {
   try {
     if (_themePanelReady) return document.getElementById('theme-panel') as HTMLDivElement | null
     _themePanelReady = true
@@ -1931,6 +1931,12 @@ function ensureThemePanelReady(): HTMLDivElement | null {
   }
 }
 
+// 语言切换后需按新语言重建面板
+export function resetThemePanel(): void {
+  try { document.getElementById('theme-panel')?.remove() } catch {}
+  _themePanelReady = false
+}
+
 export function initThemeUI(): void {
   try {
     bootstrapThemeRuntime()
@@ -1938,14 +1944,13 @@ export function initThemeUI(): void {
     _themeUiBound = true
     const btn = document.getElementById('btn-theme') as HTMLDivElement | null
     if (!btn) return
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (ev) => {
+      try { ev.stopPropagation() } catch {}
       try {
         const panel = ensureThemePanelReady()
-        if (!panel) return
-        const wasHidden = panel.classList.contains('hidden')
-        panel.classList.toggle('hidden')
-        if (!wasHidden && panel.classList.contains('hidden')) revertAllPreviews()
+        if (panel && panel.parentElement !== document.body) document.body.appendChild(panel)
       } catch {}
+      try { (window as any).flymdShowSettings?.() } catch {}
     })
   } catch {}
 }
