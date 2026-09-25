@@ -43,6 +43,20 @@
 - Windows 产物：`FastNote_x.y.z_x64-setup.exe`（NSIS 安装版）+ `FastNote_portable_x64.zip`（免安装绿色版，配便携模式使用）。
 - macOS 产物未签名：用户需右键「打开」放行；正式分发需 Developer ID 签名 + 公证（Apple 开发者账号 $99/年）。
 
+### v1.0.0/v1.0.1 发版踩坑（2026-09-25）
+
+发 v1.0.0 时连续踩了三个坑，记录于此避免复发：
+
+1. **job 级 `if` 不能引用 `matrix` 上下文** —— 曾写 `if: matrix.extra != false` 想「dispatch 时才跑 Linux/macOS」，但 GitHub 在 job 启动前评估 `if`，此时 `matrix` 不可用，导致**整个 workflow 解析失败**（所有 tag/dispatch 触发的构建 0s 即失败，Windows 也跟着死）。
+   - **解法**：删掉 job 级 `if`，把 `workflow_dispatch && inputs.{linux,macos}` 条件下放到 Linux/macOS 各自的**依赖安装/编译/上传 step** 上；Windows step 不加条件，tag push 自然只编译 Windows。改动见 098c684 提交。
+2. **portable zip 步骤写死 `FastNote.exe`** —— Tauri 二进制名取自 `Cargo.toml` 的 `[package] name = "flymd"`（内部标识符，不能改），实际产物是 `flymd.exe`，`FastNote.exe` 找不到 → portable zip 步骤 throw、job 失败（NSIS 安装包其实已正常生成）。
+   - **解法**：workflow 里 exe 路径改为 `src-tauri/target/release/flymd.exe`；并在该行加注释说明二进制名为何是 flymd 而非 FastNote。改动见 89d08bb 提交。
+3. **`softprops/action-gh-release@v1` 创建 Release 仍 403** —— 即便 `permissions: contents: write` 已加，该 action 仍报 403（疑似 action 版本/作用域问题）。
+   - **解法**：不依赖该 action，改用 `gh api repos/<owner>/<repo>/releases --method POST` 建 Release + `gh release upload -R <owner>/<repo>` 传产物。注意 `gh` 不带 `-R` 时会按 git remote 顺序误打到 `flyhunterl/flymd` 上游仓库（`gh release create` 报 "already exists" 多半是打错 repo 了），**所有 release 命令都要带 `-R niuteng5618/FastNote`**。workflow 里的 `create-release` job 如要修，建议换成 `gh` CLI 步骤。
+
+- **版本号不可重用**：远端已存在的 tag（哪怕指向孤儿提交）不能重新打同名 tag 发版——首次发 v1.0.0 时撞上远端已有的孤儿 v1.0.0 tag（旧「初始提交」），只能删旧 tag 重打。**下次发版直接递增（如 v1.0.1）更省事**，别碰已存在的 tag。
+- **发版前必查**：`gh run list -R niuteng5618/FastNote --limit 3` 确认最新构建结论是 success 再发 Release；`gh api repos/niuteng5618/FastNote/releases` 确认没有残留 draft 再建。
+
 ## 三、界面交互改动（与原版 flyMD 的差异）
 
 维护时注意这些行为是**本分支特意改的**，不要当作 bug 修回去：
