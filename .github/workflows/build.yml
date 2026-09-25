@@ -157,7 +157,9 @@ jobs:
         if: matrix.os == 'Windows'
         shell: pwsh
         run: |
-          $exe = "src-tauri/target/release/FastNote.exe"
+          # 注：Tauri 二进制名取自 Cargo.toml 的 [package] name（内部标识符 com.flymd 的衍生，
+          # 不能改），产物为 flymd.exe；productName 只影响安装包/窗口标题等用户可见处。
+          $exe = "src-tauri/target/release/flymd.exe"
           if (!(Test-Path $exe)) { throw "portable: exe not found: $exe" }
           $outDir = "src-tauri/target/release/bundle/portable"
           New-Item -ItemType Directory -Force -Path $outDir | Out-Null
