@@ -29,14 +29,14 @@ jobs:
           - platform: ubuntu-22.04
             os: Linux
             arch: x64
-            extra: ${{ github.event_name == 'workflow_dispatch' && inputs.linux }}
           - platform: macos-14
             os: macOS
             arch: universal
-            extra: ${{ github.event_name == 'workflow_dispatch' && inputs.macos }}
 
     runs-on: ${{ matrix.platform }}
-    if: matrix.extra != false
+    # 注：不能在 job 级 if 引用 matrix 上下文（GitHub 在 job 启动前评估 if，此时 matrix 不可用，
+    # 会导致整个 workflow 解析失败）。改用 step 级 if 控制非 Windows 平台仅在 workflow_dispatch 时构建，
+    # tag push 只编译 Windows（符合「仅编译 win」需求）。
 
     steps:
       - name: Checkout
@@ -67,9 +67,9 @@ jobs:
           choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System' -y
           choco install nasm -y
 
-      # Linux 特定依赖
+      # Linux 特定依赖（仅手动触发且勾选 Linux 时运行；tag push 不编译 Linux）
       - name: Install Linux dependencies
-        if: matrix.platform == 'ubuntu-22.04'
+        if: matrix.platform == 'ubuntu-22.04' && github.event_name == 'workflow_dispatch' && inputs.linux
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -94,19 +94,19 @@ jobs:
       - name: Generate icons from Flymdnew.png
         run: npx tauri icon ./Flymdnew.png
       - name: Install macOS DMG toolchain
-        if: startsWith(matrix.platform, 'macos-')
+        if: startsWith(matrix.platform, 'macos-') && github.event_name == 'workflow_dispatch' && inputs.macos
         run: |
           brew update || true
           brew list create-dmg >/dev/null 2>&1 || brew install create-dmg
           xcrun --find SetFile >/dev/null 2>&1 || sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer || true
       - name: Build .app (macOS Universal)
-        if: startsWith(matrix.platform, 'macos-')
+        if: startsWith(matrix.platform, 'macos-') && github.event_name == 'workflow_dispatch' && inputs.macos
         env:
           RUST_LOG: trace
           TAURI_BUNDLER_TARGET: universal-apple-darwin
         run: npm run tauri:build -- --bundles app --target universal-apple-darwin --verbose
       - name: Zip .app for convenience (macOS)
-        if: startsWith(matrix.platform, 'macos-')
+        if: startsWith(matrix.platform, 'macos-') && github.event_name == 'workflow_dispatch' && inputs.macos
         run: |
           APP_DIR="src-tauri/target/universal-apple-darwin/release/bundle/macos/FastNote.app"
           OUT_DIR="src-tauri/target/universal-apple-darwin/release/bundle/macos"
@@ -114,7 +114,7 @@ jobs:
             (cd "$OUT_DIR" && zip -qry FastNote_${{ matrix.arch }}.app.zip FastNote.app)
           fi
       - name: Build DMG (macOS Universal, with fallback)
-        if: startsWith(matrix.platform, 'macos-')
+        if: startsWith(matrix.platform, 'macos-') && github.event_name == 'workflow_dispatch' && inputs.macos
         env:
           RUST_LOG: trace
           TAURI_BUNDLER_TARGET: universal-apple-darwin
@@ -140,7 +140,7 @@ jobs:
               "$OUT_DMG" "$APP_DIR" || { echo "::error::Fallback create-dmg failed"; ls -la "$DMG_DIR"; exit 1; }
           fi
       - name: Upload DMG workdir on failure
-        if: failure() && startsWith(matrix.platform, 'macos-')
+        if: failure() && startsWith(matrix.platform, 'macos-') && github.event_name == 'workflow_dispatch' && inputs.macos
         uses: actions/upload-artifact@v4
         with:
           name: dmg-workdir-${{ matrix.arch }}
@@ -150,7 +150,7 @@ jobs:
         if: matrix.os == 'Windows'
         run: npm run tauri:build -- --bundles nsis
       - name: Build Tauri app (Linux)
-        if: matrix.platform == 'ubuntu-22.04'
+        if: matrix.platform == 'ubuntu-22.04' && github.event_name == 'workflow_dispatch' && inputs.linux
         run: npm run tauri:build -- --bundles deb appimage
 
       - name: Create portable zip (Windows)
@@ -183,7 +183,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload artifacts (Linux)
-        if: matrix.platform == 'ubuntu-22.04'
+        if: matrix.platform == 'ubuntu-22.04' && github.event_name == 'workflow_dispatch' && inputs.linux
         uses: actions/upload-artifact@v4
         with:
           name: FastNote-${{ matrix.os }}-${{ matrix.arch }}
@@ -193,7 +193,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Upload artifacts (macOS)
-        if: startsWith(matrix.platform, 'macos-')
+        if: startsWith(matrix.platform, 'macos-') && github.event_name == 'workflow_dispatch' && inputs.macos
         uses: actions/upload-artifact@v4
         with:
           name: FastNote-${{ matrix.os }}-${{ matrix.arch }}
