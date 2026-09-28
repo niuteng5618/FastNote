@@ -4070,8 +4070,11 @@ body.sticky-note-mode .width-bubble {
 .about-links a { color: var(--accent); text-decoration: none; }
 .about-links a:hover { text-decoration: underline; }
 
-/* 插入链接 对话框 */
-.link-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; z-index: 10010; }
+/* 插入链接 / 重命名 对话框
+   注：用 fixed 而非 absolute——这些弹窗挂在 .container 下，而 .container 在 Windows 透明窗口
+   里有圆角 + overflow:hidden，absolute 的遮罩会被裁剪、定位也受 .container stacking context 限制，
+   在 Tauri 桌面端表现为遮罩不覆盖全屏 / 弹窗显示异常。fixed 脱离 .container，与 .settings-overlay 一致。 */
+.link-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; z-index: 10010; }
 .link-overlay.hidden { display: none; }
 /* 重命名对话框需要覆盖在“库设置”等 upl-overlay 之上 */
 #rename-overlay { z-index: 10030; }
@@ -4258,9 +4261,9 @@ body.sticky-note-mode .width-bubble {
 }
 
 /* 图床设置 对话框 */
-/* 图床和同步设置弹窗 */
+/* 图床和同步设置弹窗（fixed：同 .link-overlay，脱离 .container 裁剪/定位上下文） */
 .upl-overlay {
-  position: absolute;
+  position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.5);
   backdrop-filter: blur(4px);

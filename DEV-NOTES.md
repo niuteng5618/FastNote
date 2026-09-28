@@ -57,6 +57,13 @@
 - **版本号不可重用**：远端已存在的 tag（哪怕指向孤儿提交）不能重新打同名 tag 发版——首次发 v1.0.0 时撞上远端已有的孤儿 v1.0.0 tag（旧「初始提交」），只能删旧 tag 重打。**下次发版直接递增（如 v1.0.1）更省事**，别碰已存在的 tag。
 - **发版前必查**：`gh run list -R niuteng5618/FastNote --limit 3` 确认最新构建结论是 success 再发 Release；`gh api repos/niuteng5618/FastNote/releases` 确认没有残留 draft 再建。
 
+### 重命名弹窗显示异常（2026-09-28）
+
+- **现象**：库树右键 / 标签栏的重命名弹窗在 Tauri 桌面端「显示异常、无效」（浏览器里正常，复现不了）。
+- **根因**：`.link-overlay` / `.upl-overlay` 是 `position: absolute` 且挂在 `.container` 下；`.container` 在 Windows 透明窗口里有圆角 + `overflow: hidden`，absolute 弹窗被裁剪、定位也受 `.container` stacking context 限制，遮罩不覆盖全屏、弹窗位置错乱。`.settings-overlay` 用的是 `position: fixed`，所以一直正常。
+- **修复（`style.css` 两处）**：`.link-overlay` 和 `.upl-overlay` 都从 `absolute` 改为 `fixed`，与 `.settings-overlay` 一致，脱离 `.container` 的裁剪和定位上下文。z-index 关系不变（link 10010 < upl 10020 < rename 10030），功能不受影响。
+- **注意**：弹窗从 `.container` 子节点变成视觉上覆盖全屏（含标题栏区域），但弹窗本身有遮罩 + 居中对话框，不会误触标题栏拖拽区——`.link-actions button` 早已 `-webkit-app-region: no-drag`，Esc/取消按钮仍正常。
+
 ## 三、界面交互改动（与原版 flyMD 的差异）
 
 维护时注意这些行为是**本分支特意改的**，不要当作 bug 修回去：
