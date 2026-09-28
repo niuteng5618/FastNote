@@ -14,7 +14,7 @@ assignees: []
 - 搜索过相关 Issue 吗？
 
 ## 环境信息（如与问题相关）
-- flyMD 版本号：`vX.Y.Z`
+- FastNote 版本号：`vX.Y.Z`
 - 操作系统：例如 `Windows 11 / macOS 14 / Ubuntu 22.04`
 
 ## 截图或示例

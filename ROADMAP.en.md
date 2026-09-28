@@ -11,18 +11,18 @@
 ## Update v1.4.3
 - Fixed: When a temporary library is active, every WebDAV sync entry now skips at the sync-core layer, including startup sync, F5, the settings test button, and menu sync, preventing sync from still targeting the previous saved library
 - Fixed: When the WebDAV provider is under maintenance, the network is unavailable, or remote directory scanning fails, the sync run now skips immediately instead of treating the failure as an empty remote directory, avoiding accidental local deletion or remote-delete prompts
-- Fixed: When launching FlyMD by double-clicking or using “Open with” on a document outside saved libraries, the temporary-library session is established before startup sync is initialized, removing a startup race that could trigger sync against the wrong library
+- Fixed: When launching FastNote by double-clicking or using “Open with” on a document outside saved libraries, the temporary-library session is established before startup sync is initialized, removing a startup race that could trigger sync against the wrong library
 - Improved: WebDAV sync now has a session-level blocking hook so special library states can be rejected at the single sync entry point instead of relying on UI-only disabled buttons
 
 ## Update v1.4.2
-- Added: “Source + Reading split view” can now be enabled directly from Reading mode; FlyMD automatically switches back to Source mode and opens the split view, reducing friction when editing while reading
+- Added: “Source + Reading split view” can now be enabled directly from Reading mode; FastNote automatically switches back to Source mode and opens the split view, reducing friction when editing while reading
 - Fixed: Network proxy settings no longer globally rewrite `window.fetch`; plugin HTTP requests and update checks now have timeouts plus localhost bypasses, preventing severe slowdown after enabling a proxy
 - Fixed: Dragged folders or abnormal directories are no longer treated as Markdown documents, and high-risk folders such as `EBWebView`, `node_modules`, and `.git` are skipped to avoid sidebar scan issues and stalls
 - Fixed: In dark mode, the current Markdown document icon and selected state in the library sidebar now have clearer contrast
 - Improved: Library sidebar scanning is more conservative around build caches, version-control folders, and WebView data directories, reducing the risk of accidentally scanning temporary/cache trees
 
 ## Update v1.4.1
-- Added: When opening `md` / `markdown` / `txt` files outside the saved library through system double-click or “Open with”, FlyMD now treats the file's folder as a session-only temporary library in the sidebar; it is not written to the library configuration and disappears after switching back to a saved library or closing the app
+- Added: When opening `md` / `markdown` / `txt` files outside the saved library through system double-click or “Open with”, FastNote now treats the file's folder as a session-only temporary library in the sidebar; it is not written to the library configuration and disappears after switching back to a saved library or closing the app
 - Improved: The temporary library sidebar shows built-in supported files in the same folder (`md` / `markdown` / `txt` / `pdf`) plus plugin-provided suffixes, and marks the title as temporary to avoid confusing it with saved libraries
 - Improved: WebDAV sync actions are disabled while a temporary library is active, preventing sync from targeting the previous saved library while the sidebar is showing a temporary folder
 - Added: Theme Settings now includes a symbol auto-completion toggle, so paired-symbol completion can be disabled when needed
@@ -65,7 +65,7 @@
 ## Update v1.3.4
 - Added: Source mode now shows a left-side line-number gutter that stays in sync with scrolling and highlights the current line
 - Improved: Windows installers now use a dedicated icon for associated documents instead of reusing the app icon
-- Improved: Windows file associations now use FlyMD-owned ProgIDs such as `flymd.markdown` / `flymd.pdf`, avoiding collisions with generic system type names
+- Improved: Windows file associations now use FastNote-owned ProgIDs such as `flymd.markdown` / `flymd.pdf`, avoiding collisions with generic system type names
 - Docs: README now credits the file icon designer
 
 ## Update v1.3.3
@@ -366,13 +366,13 @@
 - Improved: The AutoYAML Metadata extension now works together with the Property View, auto-filling front matter so that properties appear directly in the property table and are easier to maintain.
 - Improved: Completed English dictionaries and in-app copy for extensions such as the high-precision PDF parser, MinerU parser and Smart Floating Toolbar, so users in English locale get full prompts and descriptions.
 - Improved: Extended the i18n runtime with a `flymd:localeChanged` event so plugins can listen for language changes and re-register themselves or refresh UI copy to keep Chinese/English views in sync.
-- Improved: After switching the app language, flyMD now shows a “please restart” suggestion to avoid display glitches caused by stale language state in some extensions or windows.
+- Improved: After switching the app language, FastNote now shows a “please restart” suggestion to avoid display glitches caused by stale language state in some extensions or windows.
 
 ## Update v0.7.3
 - Added: New “Extension Menu Manager” dialog under the “Plugins” menu that lists all context-menu entries and “Plugins” dropdown actions registered by extensions, letting you toggle visibility per extension to declutter the UI without uninstalling plugins.
 - Added: Published the “AutoYAML Metadata” extension, which can automatically add YAML front matter to the current document (such as title and tags) and optionally call the AI assistant to generate tags and a summary, making it easier to maintain a more structured knowledge base.
 - Improved: The Backlinks plugin now scans the YAML front matter at the top of each document for a `tags` field and folds those tags into its index and “related notes” logic, giving tag-driven vaults more accurate backlinks and recommendations.
-- Improved: Completed English copy for the extensions marketplace and most official plugins (including Graph View, Backlinks, Git History, Word/Excel Importer, S3 Gallery, Typecho integrations, xxtui todo-push and AutoYAML Metadata), with manifests and plugin UIs now following flyMD’s language setting.
+- Improved: Completed English copy for the extensions marketplace and most official plugins (including Graph View, Backlinks, Git History, Word/Excel Importer, S3 Gallery, Typecho integrations, xxtui todo-push and AutoYAML Metadata), with manifests and plugin UIs now following FastNote’s language setting.
 - Fixed: WebDAV sync status indicators no longer get stuck after enabling or disabling the built-in sync extension; switches in the extensions panel and related menus now reflect the current state immediately.
 
 ## Update v0.7.2
@@ -404,7 +404,7 @@
 - Added: New editor context-menu entries such as “Insert backlink” and “Refresh backlinks for current note”, making it easier to wrap selected text with `[[Title]]` links; when used together with the AI assistant plugin you can insert AI-recommended related notes with a single action.
 - Improved: Source mode now has inline `[[title]]` completion; when you type `[[` in the plain Markdown editor, a suggestion box pops up listing notes from the current library and you can pick one with arrow keys + Enter (note: title completion for backlinks is currently only available in source mode; WYSIWYG mode automatically disables this feature).
 - Improved: The “PDF & Image High-Precision Parser” extension now downloads remote images to local storage and reads them via the plugin runtime, reducing the chance of broken images when CDN links expire.
-- Fixed: On macOS, double-clicking document icons or opening files/libraries from Finder on a cold start could fail to deliver the path to flyMD; path handling has been hardened so these entry points behave more reliably.
+- Fixed: On macOS, double-clicking document icons or opening files/libraries from Finder on a cold start could fail to deliver the path to FastNote; path handling has been hardened so these entry points behave more reliably.
 - Fixed: In some multi-monitor setups with certain resolution/DPI combinations, the main window could grow abnormally large or beyond screen bounds; window sizing has been adjusted to stay within a reasonable range.
 - Misc: WYSIWYG v2 now handles bracket escaping and image paths more carefully so Obsidian-style `[[links]]` survive mode switches as much as possible, and several internal implementation details have been cleaned up.
 
@@ -418,7 +418,7 @@
 ## Update v0.6.7
 - Added: Markdown footnote syntax support (`[^1]` / `[^name]`) so both source and reading modes render proper footnote sections, keeping annotations structured in long documents.
 - Improved: Footnote markers in reading mode now show a tooltip with the full footnote content near the reference, reducing scroll back-and-forth when looking up notes.
-- Added: Published the “Git Version Control” extension, bringing a VS Code–style Git sidebar to flyMD with history list and inline diff highlighting for the current library and the current document.
+- Added: Published the “Git Version Control” extension, bringing a VS Code–style Git sidebar to FastNote with history list and inline diff highlighting for the current library and the current document.
 - Added: Extended the runtime with Git command bridge APIs that only allow safe operations such as status inspection, history querying and explicit commits, avoiding destructive actions on existing repositories.
 - Misc: Polished error handling and safety checks around Git-related features to lay groundwork for future version-control-centric extensions.
 
@@ -437,7 +437,7 @@
 - Improved: The “PDF & Image High-Precision Parser” extension now supports automatic paginated translation for large PDFs and shows a confirmation dialog before starting long-running translation tasks, reducing accidental heavy jobs and quota waste.
 - Improved: The document library now watches the filesystem and refreshes automatically when third-party tools create, delete or modify files under the library root, keeping the sidebar in sync with the actual folder contents.
 - Improved: Library sidebar context menu positions itself within the visible window to avoid being clipped off-screen, and the `D` / `M` keyboard shortcuts have been removed to eliminate rare accidental triggers.
-- Improved: When creating a new document or folder from the library sidebar, flyMD now prompts for a name first and only then creates the underlying file or directory, avoiding piles of “untitled” entries.
+- Improved: When creating a new document or folder from the library sidebar, FastNote now prompts for a name first and only then creates the underlying file or directory, avoiding piles of “untitled” entries.
 - Fixed: Reverted the dark-mode behavior change introduced in v0.6.3 and temporarily restored the “auto-enable dark theme when the OS is in dark mode” logic to fix dark-theme issues on some platforms.
 - Docs: Updated README and plugin development docs to cover the new extension APIs and the latest usage notes for the MinerU PDF/Image parsing extension.
 
@@ -446,7 +446,7 @@
 - Added: Published the “Send to Blinko” extension, adding a context-menu entry to send the current content to Blinko in one click.
 - Improved: Upgraded the “PDF & Image High-Precision Parser” extension to support direct image parsing and one-click PDF translation, making it more effective on handwritten, complex-layout and multi-language documents.
 - Improved: Updated the AI assistant extension and its model list, removing support for the Qwen3-Omni model.
-- Improved: Removed the logic that force-enables dark theme when the OS is in dark mode; theme light/dark now strictly follows flyMD’s own setting so users have full control regardless of system appearance.
+- Improved: Removed the logic that force-enables dark theme when the OS is in dark mode; theme light/dark now strictly follows FastNote’s own setting so users have full control regardless of system appearance.
 - Improved: Library sidebar now forcibly disables background grid patterns and always uses a solid background, keeping document lists readable under all themes.
 - Fixed: Incorrect title extraction in WYSIWYG mode that could cause the window title to diverge from the actual document title.
 - Fixed: The xxtui todo-push extension now preserves the original Markdown text when sending tasks and reminders instead of losing formatting.
@@ -470,7 +470,7 @@
 
 ## Update v0.6.0
 - Added: Custom typography controls in the Theme panel (line height, paragraph spacing, content max width and first-line indent), so you can tune the reading/WYSIWYG/source layouts to your own taste.
-- Added: A “Default source mode” toggle; when enabled, flyMD always opens documents in source mode instead of auto-switching to preview.
+- Added: A “Default source mode” toggle; when enabled, FastNote always opens documents in source mode instead of auto-switching to preview.
 - Added: In WYSIWYG mode, automatic pairing / wrapping / paired deletion for both Chinese and Western brackets & quotes, scoped to the ProseMirror view so it does not interfere with source-mode typing.
 - Improved: Typing ``` and pressing Enter in WYSIWYG mode now instantly creates a framed code block with language selector, with better keyboard navigation and more robust handling of $$ math blocks.
 - Improved: First-line indent now only applies to top-level paragraphs, no longer affecting Mermaid diagrams or code blocks; dedicated Mermaid styles in WYSIWYG avoid truncated Chinese labels and layout glitches.
@@ -494,11 +494,11 @@
 - Improved: The extension marketplace now uses a stable sort order (built-in, recommended, then A–Z by name), adds an "Updatable" filter, and proactively invalidates cached metadata when sort rules or structure change so you always see fresh plugin lists.
 - Improved: Sticky note mode now ignores global dark mode and refines its toolbar buttons, while the native context menu is disabled on notes to avoid accidental right-click actions on small note windows.
 - Improved: Focus Mode and main menu buttons receive layout and spacing tweaks for clearer hierarchies and more predictable hit targets, aligning controls with the compact title bar design.
-- Improved: AI assistant dark mode styling and the Vision toggle appearance are tuned to match flyMD’s night theme, with code snippets honoring the global monospace font setting.
-- Fixed: Restored window dragging on Linux and macOS when compact title bar mode is enabled so you can still drag the window from inside flyMD even when the native title bar is hidden.
+- Improved: AI assistant dark mode styling and the Vision toggle appearance are tuned to match FastNote’s night theme, with code snippets honoring the global monospace font setting.
+- Fixed: Restored window dragging on Linux and macOS when compact title bar mode is enabled so you can still drag the window from inside FastNote even when the native title bar is hidden.
 
 ## Update v0.5.7
-- Added: Compact title bar mode with custom window controls drawn inside flyMD, toggled from the theme panel and persisted between launches, including integration with Focus Mode so the native title bar can be fully hidden.
+- Added: Compact title bar mode with custom window controls drawn inside FastNote, toggled from the theme panel and persisted between launches, including integration with Focus Mode so the native title bar can be fully hidden.
 - Added: Syntax highlighting for code blocks in WYSIWYG mode plus a compact icon-style copy button that adapts to light/dark backgrounds for easier reading and copying of long code snippets.
 - Added: Typecho Manager upgrades including editable title in the download/publish dialog, automatic title fallback from the current file name, a new API that renames the local Markdown file to `ID-title` after publish, and better compatibility with themes that rely on a top-level `thumb` field.
 - Added: Third-party "Xiaohongshu copywriting generator" AI extension, now listed in the marketplace and acknowledged in the Chinese and English READMEs.
@@ -512,7 +512,7 @@
 
 ## Update v0.5.6
 - Added: Official "Typecho Post Manager" extension that uses XML-RPC to fetch posts from Typecho, filter by date/category, and download them as local Markdown files, and it is now listed in the built-in extension marketplace.
-- Added: Typecho Manager now supports creating and publishing posts directly from flyMD, editing slug/cover/custom fields, and lazily loading categories from the remote site on first publish to reduce manual configuration.
+- Added: Typecho Manager now supports creating and publishing posts directly from FastNote, editing slug/cover/custom fields, and lazily loading categories from the remote site on first publish to reduce manual configuration.
 - Added: New `context.htmlToMarkdown` API for extensions, allowing plugins to convert HTML returned by Typecho, WordPress or arbitrary web APIs into Markdown with optional `baseUrl` to resolve relative links.
 - Added: Built-in free Gemini Vision model in the AI Assistant so you can choose "Gemini Vision" under the free provider, with a dedicated "Bohe Gongyi" badge and link when that channel is used.
 - Improved: Typecho Manager now supports keyword search, bulk download of selected posts, and smarter default download directories (relative or absolute), and automatically refreshes the file tree after pulling articles so your library view stays in sync with disk.
@@ -561,7 +561,7 @@
 - Fixed: Reading mode sometimes falling back to a pure white background under certain themes, and introduced a compatibility tweak for Arch Linux AppImage builds affected by WebKitGTK / GPU driver interactions that could cause white-screen issues.
 
 ## Update v0.5.1
-- Added: Open collaborative editing support with an open-source FlyMD collaboration server sample (the `OSserver` directory) and the companion "Collaboration (Open Server)" extension, enabling room + password based multi-user editing on your own server (Beta).
+- Added: Open collaborative editing support with an open-source FastNote collaboration server sample (the `OSserver` directory) and the companion "Collaboration (Open Server)" extension, enabling room + password based multi-user editing on your own server (Beta).
 - Added: Plugin host APIs for registering/consuming custom namespaces and listening to source-editor selection changes, providing the foundation for collaboration and other advanced extensions.
 - Improved: File-tree click/double-click integration with the multi-tab system to avoid tab mix-ups or overwritten content when using Ctrl+click or switching libraries.
 - Improved: Editor layout sizing and scrolling logic, fixing cases where repeated Enter presses could push the menubar/tabbar off-screen and where edit/preview area heights were miscalculated.
@@ -587,11 +587,11 @@
 - Fixed: Tauri HTTP scope validation so legitimate HTTP/HTTPS requests are no longer blocked by overly strict rules.
 
 ## Update v0.4.7
-- Added: Full configuration export/import so you can back up or migrate all FlyMD settings, extensions, and cache data in one shot.
-- Added: Portable Mode to store config alongside the app root, making it easy to carry FlyMD on a USB drive.
+- Added: Full configuration export/import so you can back up or migrate all FastNote settings, extensions, and cache data in one shot.
+- Added: Portable Mode to store config alongside the app root, making it easy to carry FastNote on a USB drive.
 - Added: Tab right-click menu so actions like closing or pinning a tab can be done directly on the tab bar (details will be iterated in later builds).
 - Improved: Adjusted `Ctrl+N` behavior to better fit the multi-tab workflow so new files and new tabs behave more intuitively together.
-- Improved: When all tabs are closed, FlyMD now returns to a blank document in edit mode instead of leaving you in a “no document” state.
+- Improved: When all tabs are closed, FastNote now returns to a blank document in edit mode instead of leaving you in a “no document” state.
 - Improved: Unified the plugin notification system through a top notification center and exposed new `showNotification / hideNotification` APIs for extensions.
 - Improved: In the AI Assistant extension, the “Continue / Polish / Correct” quick actions can now focus only on the selected text, making right-click workflows selection-aware.
 - Added: Reserved keyboard shortcut `Alt+W` for closing the current tab .

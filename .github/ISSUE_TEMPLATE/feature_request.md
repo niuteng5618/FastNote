@@ -1,6 +1,6 @@
 ---
 name: 功能建议（Feature Request）
-about: 提出新功能或改进建议，帮助 flyMD 变得更好
+about: 提出新功能或改进建议，帮助 FastNote 变得更好
 title: "[Feature] 简要描述你的建议"
 labels: ["enhancement", "needs-triage"]
 assignees: []

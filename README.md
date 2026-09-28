@@ -22,7 +22,7 @@
 
 ## 简介
 
-FastNote 是一款轻量级、高性能的本地 Markdown 编辑器,支持 PDF 高精度解析、AI 辅助写作、智能待办提醒等功能。本地优先,数据安全可控,开箱即用。
+FastNote 是一款轻量级、高性能的本地 Markdown 编辑器,支持 PDF 高精度解析、AI 待办/日记助手、日历与待办等功能。本地优先,数据安全可控,开箱即用。
 
 <img width="1920" height="1080" alt="hero" src="https://github.com/user-attachments/assets/acf758c1-6c8e-4b4f-a313-d4ce2190394b" />
 
@@ -57,12 +57,12 @@ FastNote 是一款轻量级、高性能的本地 Markdown 编辑器,支持 PDF �
 
 ### 高级功能
 
-- **AI 助手** - 辅助写作、润色与改错,支持 Markdown 渲染与代码高亮,内置免费 AI 模型开箱即用
-- **全文搜索 / 知识库搜索** - 库侧栏快速搜索支持 `:关键词` 全文搜索与 `::关键词` 知识库语义搜索(需 flymd-RAG 索引)
-- **智能待办提醒** - 自动识别 TODO,支持微信、短信、邮箱、钉钉、飞书等多渠道推送
+- **AI 助手** - Agent 式待办/日记助手,通过 tool_call 自动整理待办、编写日记并生成文件,支持自定义 OpenAI / Anthropic 兼容接口,回复支持 Markdown 渲染
+- **全文搜索 / 知识库搜索** - 库侧栏快速搜索支持 `:关键词` 全文搜索与 `::关键词` 知识库语义搜索(需 RAG 知识库索引插件)
+- **日历与待办** - 内置日记与待办,自动识别 TODO,按日/周/月汇总管理,并提供日记、会议纪要等模板
 - **高精度 PDF/图片解析** - 解析为 MD 或 Docx 格式,支持翻译
 - **一键发布** - 支持 Typecho / WordPress / Halo 博客平台
-- **协同编辑** - 通过扩展插件实现多人实时协同(需安装"协同编辑"扩展,详询 QQ 群 343638913)
+- **协同编辑** - 通过扩展插件实现多人实时协同(需安装"协同编辑"扩展)
 - **Git 版本控制** - 文档接入 Git,支持状态查询、历史查看与显式提交
 - **iframe 嵌入** - 支持音乐、视频、地图、在线文档等外部内容
 - **选区感知 AI** - 右键菜单快捷操作可仅作用于选中文本
@@ -70,7 +70,7 @@ FastNote 是一款轻量级、高性能的本地 Markdown 编辑器,支持 PDF �
 
 > 💡 AI 助手扩展会在首次启动后后台静默安装;如卸载,将不会再次自动安装。
 >
-> ⚠️ 内置 AI 模型旨在降低 AI 应用门槛。本应用已对内置模型设置严格速率限制,请勿滥用。推荐[注册硅基流动账号](https://cloud.siliconflow.cn/i/X96CT74a)解锁更强模型和更高额度。
+> ⚠️ AI 助手需在扩展设置中填写自定义的 OpenAI / Anthropic 兼容接口后使用。
 
 
 
@@ -83,7 +83,7 @@ FastNote 是一款轻量级、高性能的本地 Markdown 编辑器,支持 PDF �
 > [!WARNING]
 > **Linux(Arch 系发行版)提示**
 > - 在 Arch / Manjaro 等基于 Arch 的发行版上,AppImage 版本可能因 WebKitGTK 或显卡驱动导致白屏;
-> - 推荐优先通过 AUR 包 `flymd` 安装(例如:`yay -S flymd`)。
+> - 推荐优先使用 deb 安装包,或从源码自行构建。
 >
 > 旧的 deb → debtap / PKGBUILD 转 pacman 方案已不再推荐使用。
 >
@@ -110,7 +110,7 @@ FastNote 是一款轻量级、高性能的本地 Markdown 编辑器,支持 PDF �
 
 ### 按日期汇总待办事项
 
-**一份会议纪要或/旅行计划/个人笔记  AI拟定待办  按时间/人推送提醒（微信/短信/钉钉/飞书等）  按日/周/月 汇总待办事项   提供日记 会议纪要 等模板**
+**一份会议纪要 / 旅行计划 / 个人笔记 → AI 拟定待办 → 按日/周/月汇总待办事项 → 提供日记、会议纪要等模板**
 
 <img width="1065" height="726" alt="2123769743dff2e78a75b3bc3544fa9e" src="https://github.com/user-attachments/assets/dd82577d-eebf-415b-bcd3-96dc3e23ac7e" />
 
@@ -173,12 +173,12 @@ FastNote 是一款轻量级、高性能的本地 Markdown 编辑器,支持 PDF �
 
 ### 安装
 
-从 [Releases](https://github.com/flyhunterl/flymd/releases) 下载对应平台安装包:
+从 [Releases](https://github.com/niuteng5618/FastNote/releases) 下载对应平台安装包:
 
 | 平台 | 安装方式 |
 |------|----------|
-| **Windows** | `winget install flyhunterl.FlyMD` 或下载安装包 |
-| **Linux** | 支持主流桌面环境,Arch 系发行版推荐通过 AUR 安装:`yay -S flymd` 或 `paru -S flymd` |
+| **Windows** | 下载安装包(NSIS)或免安装 portable 版 |
+| **Linux** | 支持主流桌面环境,提供 deb / AppImage 安装包 |
 | **macOS** | 支持 Intel 和 Apple Silicon |
 
 <details>
@@ -188,7 +188,7 @@ FastNote 是一款轻量级、高性能的本地 Markdown 编辑器,支持 PDF �
 
 **方法 1:终端命令(推荐)**
 ```bash
-sudo xattr -r -d com.apple.quarantine /Applications/flymd.app
+sudo xattr -r -d com.apple.quarantine /Applications/FastNote.app
 ```
 
 **方法 2:系统设置方式**
@@ -196,7 +196,7 @@ sudo xattr -r -d com.apple.quarantine /Applications/flymd.app
 2. **按住 Control 键点击**应用图标,选择"打开"
 3. 在弹出的对话框中点击"打开"按钮
 
-> ⚠️ FlyMD 是开源软件,代码完全透明,"已损坏"提示仅因未进行 Apple 代码签名。
+> ⚠️ FastNote 是开源软件,代码完全透明,"已损坏"提示仅因未进行 Apple 代码签名。
 
 </details>
 
@@ -232,34 +232,33 @@ sudo xattr -r -d com.apple.quarantine /Applications/flymd.app
 **库侧栏搜索**:
 - 默认：直接输入关键字，过滤文件名/路径
 - 全文搜索：输入 `:关键词`，按 Enter 开始(可点“继续深度搜索”扫全文)
-- 知识库搜索：输入 `::关键词`，按 Enter 开始(需安装/启用 flymd-RAG 并完成索引)
+- 知识库搜索：输入 `::关键词`，按 Enter 开始(需安装/启用 RAG 知识库索引插件并完成索引)
 
 ---
 
 ## 扩展开发
 
-FlyMD 拥有丰富的插件生态,支持通过扩展插件无限扩展功能。
+FastNote 拥有丰富的插件生态,支持通过扩展插件无限扩展功能。
 
 ### 精选插件
 
 **AI 与写作**:
-- **AI 助手** - 辅助写作、润色与改错,支持 Markdown 渲染与代码高亮,内置免费模型开箱即用
+- **AI 助手** - Agent 式待办/日记助手,通过 tool_call 自动整理待办、编写日记并生成文件,支持自定义 OpenAI / Anthropic 兼容接口
 - **小红书文案生成** - 接入 AI,内置小红书爆款风格,支持一键润色、扩写与自定义提示词模板
 
 **文档处理**:
 - **PDF 高精度解析** - 使用大模型高精度识别 PDF 为 Markdown 或 Docx,支持手写、布局、公式和表格识别
 - **Markdown 表格助手** - 在光标处快速插入 Markdown 表格,提升结构化内容编辑效率
 
-**发布与提醒**:
+**发布**:
 - **Typecho 博文管理** - 从 Typecho 拉取博文列表并下载为本地 Markdown,支持按时间/分类筛选,并支持从当前文档覆盖远端文章
-- **xxtui 待办推送** - 扫描文档中的未完成待办并推送到微信、短信、邮箱等渠道,适合个人任务提醒
 
 **知识管理**:
 - **双向链接（Backlinks）** - 基于 [[标题]] 语法自动建立笔记间的正向/反向链接,并提供 AI 关联推荐
 - **关系图谱（Graph View）** - 基于双向链接索引构建关系图谱视图,以当前文档为中心展示局部关系网络
-- **RAG 知识库索引（flymd-RAG）** - 为本地 Markdown/TXT 构建向量索引,提供语义检索与 RAG 知识库支持,可与 AI 助手联动使用
+- **RAG 知识库索引** - 为本地 Markdown/TXT 构建向量索引,提供语义检索与 RAG 知识库支持,可与 AI 助手联动使用
 
-> 👉 [查看所有插件](https://flymd.llingfei.com/extensions.html)
+> 👉 [查看所有插件](https://github.com/niuteng5618/FastNote)
 
 ### 安装扩展
 
@@ -296,36 +295,9 @@ FlyMD 拥有丰富的插件生态,支持通过扩展插件无限扩展功能。
 | [KaTeX](https://katex.org/) | 数学公式渲染 |
 | [Mermaid](https://mermaid.js.org/) | 图表绘制 |
 
-**生态合作伙伴**:
-
-| 合作伙伴 | 简介 | 支持类型 |
-|---------|------|---------|
-| [硅基流动](https://cloud.siliconflow.cn/i/X96CT74a) | 全球领先的 AI 能力提供商 | **免费模型提供商** |
-| [XXTUI](https://www.xxtui.com/) | 简单高效的个人推送 API | 推送服务支持 |
-| [x666.me](https://x666.me/register?aff=yUSz) | 优质 AI 接口支持的公益站 | 模型服务支持 |
-
-**感谢硅基流动提供的免费 AI 模型支持**:
-
-<a href="https://cloud.siliconflow.cn/i/X96CT74a" target="_blank">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="public/plugins/ai-assistant/Powered-by-dark.png">
-    <source media="(prefers-color-scheme: light)" srcset="public/plugins/ai-assistant/Powered-by-light.png">
-    <img alt="Powered by SiliconFlow" src="public/plugins/ai-assistant/Powered-by-light.png" width="200">
-  </picture>
-</a>
-
 ---
 
 ## 社区与支持
-
-### 加入社区
-
-欢迎加入社区获取最新动态、版本预览与使用技巧:
-
-| 平台 | 链接 |
-|------|------|
-| QQ 群 | 343638913 |
-| Telegram | [t.me/+3SOMbwSbCvIxMGQ9](https://t.me/+3SOMbwSbCvIxMGQ9) |
 
 ### 社区开发者
 
@@ -411,18 +383,12 @@ FlyMD 拥有丰富的插件生态,支持通过扩展插件无限扩展功能。
 
 详见:[ROADMAP.md](ROADMAP.md)
 
-### Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=flyhunterl/flymd&type=date&legend=top-left)](https://www.star-history.com/#flyhunterl/flymd&type=date&legend=top-left)
-
 ### 许可协议
 
 本项目基于 [GNU 通用公共许可证 第 3 版 (GPL-3.0)](LICENSE) 发布。
 
 - ✅ **允许**：在遵守 GPL-3.0 的前提下，任何用途（包括商业用途）的使用、修改、复制与再分发
 - ❗ **约束**：若分发本项目或修改版本（无论是否收费），必须开放对应源代码并保留版权与许可信息
-
-如需在与 GPL-3.0 不兼容的闭源商业场景中使用本项目，请联系：flyhunterl <flyhunterl@gmail.com>
 
 完整许可证：[LICENSE](LICENSE) | 第三方组件：[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)
 
@@ -431,7 +397,7 @@ FlyMD 拥有丰富的插件生态,支持通过扩展插件无限扩展功能。
 <details>
 <summary><strong>macOS 提示"已损坏,无法打开"怎么办?</strong></summary>
 
-执行:`sudo xattr -r -d com.apple.quarantine /Applications/flymd.app`,或按住 Control 键点击应用选择"打开"。
+执行:`sudo xattr -r -d com.apple.quarantine /Applications/FastNote.app`,或按住 Control 键点击应用选择"打开"。
 
 </details>
 
@@ -458,18 +424,3 @@ FlyMD 拥有丰富的插件生态,支持通过扩展插件无限扩展功能。
 目前不支持 `- [ ]`/`- [x]` 待办语法,请在源码/预览模式中编辑待办。
 
 </details>
-
----
-
-## 开源不易
-
-分享: 个人使用稳定的模型提供商
-
-
-⭐⭐⭐[rightcode](https://www.right.codes/register?aff=E8E36524) **:稳定性和性价比都极高的Claude和codex**
-
-
-
-
-
-<img width="300" height="300" alt="image" src="https://github.com/user-attachments/assets/4a716fd5-dc61-4a4f-b968-91626debe8d2" />

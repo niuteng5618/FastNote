@@ -17,7 +17,7 @@
 
 ## Overview
 
-flyMD provides a flexible plugin system that allows developers to extend the editor's functionality. Plugins can:
+FastNote provides a flexible plugin system that allows developers to extend the editor's functionality. Plugins can:
 
 - Add custom menu items
 - Access and modify editor content
@@ -28,7 +28,7 @@ flyMD provides a flexible plugin system that allows developers to extend the edi
 
 ### Built-in Extensions
 
-flyMD includes the following built-in extensions:
+FastNote includes the following built-in extensions:
 
 1. **Image Hosting (S3/R2)** - Upload images to S3/R2 object storage
 2. **WebDAV Sync** - Sync documents via WebDAV protocol
@@ -73,7 +73,7 @@ my-plugin/
 - `author` (optional): Author information
 - `description` (optional): Plugin functionality description
 - `main` (required): Plugin entry file, defaults to `main.js`
-- `minHostVersion` (optional): Minimum required flyMD version. Installation will be rejected if user's flyMD version is lower, prompting them to upgrade
+- `minHostVersion` (optional): Minimum required FastNote version. Installation will be rejected if user's FastNote version is lower, prompting them to upgrade
 - `i18n` (optional, recommended): Multi-language metadata organized by language code, e.g.:
   - `i18n.en.name` / `i18n.en.description`: English name and description
   - Current host versions do not rely on this field yet, but future versions may prefer it when rendering the marketplace in different languages. Pre-populating it makes your plugin more future-proof.
@@ -116,7 +116,7 @@ export function openSettings(context) {
 
 ### 5. Install Plugin
 
-In flyMD:
+In FastNote:
 1. Click the "Extensions" button in the menu bar
 2. Enter in the extension installation input box:
    - GitHub repository: `username/repository` or `username/repository@branch`
@@ -144,7 +144,7 @@ my-plugin/
   "name": "Example Plugin",
   "version": "1.0.0",
   "author": "Your Name <email@example.com>",
-  "description": "This is an example plugin demonstrating flyMD extension development",
+  "description": "This is an example plugin demonstrating FastNote extension development",
   "main": "main.js",
   "minHostVersion": "0.3.0",
   "homepage": "https://github.com/username/example-plugin",
@@ -154,7 +154,7 @@ my-plugin/
 
 **Version Compatibility Example:**
 
-If your plugin uses new APIs introduced in flyMD 0.3.5, you can set:
+If your plugin uses new APIs introduced in FastNote 0.3.5, you can set:
 
 ```json
 {
@@ -162,19 +162,19 @@ If your plugin uses new APIs introduced in flyMD 0.3.5, you can set:
   "name": "Advanced Features Plugin",
   "version": "2.0.0",
   "minHostVersion": "0.3.5",
-  "description": "This plugin requires flyMD 0.3.5 or higher"
+  "description": "This plugin requires FastNote 0.3.5 or higher"
 }
 ```
 
-When users try to install this plugin on flyMD 0.3.4 or lower, they will receive an error message:
+When users try to install this plugin on FastNote 0.3.4 or lower, they will receive an error message:
 ```
-This extension requires flyMD 0.3.5 or higher, current version is 0.3.4.
-Please upgrade flyMD before installing this extension.
+This extension requires FastNote 0.3.5 or higher, current version is 0.3.4.
+Please upgrade FastNote before installing this extension.
 ```
 
 ## Plugin API
 
-Plugins access flyMD functionality through the `context` object.
+Plugins access FastNote functionality through the `context` object.
 
 ### context.http
 
@@ -613,7 +613,7 @@ The `condition` and `onClick` callback functions receive a context object:
 - Context menu only overrides browser default menu when extensions are registered
 - **Access native context menu**: Hold `Shift` key while right-clicking to show browser native menu
 - Submenus support hover expansion, mouse over menu items with arrows to expand submenus
-- **Language switching**: flyMD can switch UI language at runtime; built-in menus refresh automatically, but plugin-registered context menu items do not (the `label` text is fixed when you call `addContextMenuItem`). To make your menu text follow language changes immediately, listen for the language change event and re-register menus.
+- **Language switching**: FastNote can switch UI language at runtime; built-in menus refresh automatically, but plugin-registered context menu items do not (the `label` text is fixed when you call `addContextMenuItem`). To make your menu text follow language changes immediately, listen for the language change event and re-register menus.
 
 #### Language Switching & Menu Refresh
 
@@ -972,7 +972,7 @@ context.ui.notice('Opened document, length: ' + content.length, 'ok');
 ```
 
 **Note:**
-- Only supports document types currently supported by flyMD (`md / markdown / txt / pdf`).
+- Only supports document types currently supported by FastNote (`md / markdown / txt / pdf`).
 - Uses internal app opening process, updates current document path, recent files, and other states.
 
 ### context.createStickyNote
@@ -1308,7 +1308,7 @@ export function activate(context) {
 
 ## Theme Extensions
 
-flyMD has a built-in theme system and exposes optional Theme extension APIs for plugins to extend or override "color palettes, typography styles, and Markdown rendering styles".
+FastNote has a built-in theme system and exposes optional Theme extension APIs for plugins to extend or override "color palettes, typography styles, and Markdown rendering styles".
 
 ### Capabilities Overview
 
@@ -1869,7 +1869,7 @@ export async function activate(context) {
 
 ### Q: How to debug plugins?
 
-A: Use `console.log` to output debug information, press `F12` or `Ctrl+Shift+I` in flyMD to open developer tools to view.
+A: Use `console.log` to output debug information, press `F12` or `Ctrl+Shift+I` in FastNote to open developer tools to view.
 
 ```javascript
 export function activate(context) {
@@ -1903,13 +1903,13 @@ A: Each plugin can only add one main menu item, but can pop up submenus in the m
 ## Reference Resources
 
 - [Typecho Publisher Plugin](https://github.com/TGU-HansJack/typecho-publisher-flymd) - Official example plugin
-- [flyMD GitHub Repository](https://github.com/flyhunterl/flymd)
+- [FastNote GitHub Repository](https://github.com/niuteng5618/FastNote)
 - [Tauri Documentation](https://tauri.app/)
 
 ## License
 
-This document follows the same license as the project: flyMD Non-Commercial Open Source License Agreement (NC 1.0), see [LICENSE](LICENSE).
+This document follows the same license as the project: FastNote Non-Commercial Open Source License Agreement (NC 1.0), see [LICENSE](LICENSE).
 
 ---
 
-If you have questions or suggestions, welcome to submit an [Issue](https://github.com/flyhunterl/flymd/issues).
+If you have questions or suggestions, welcome to submit an [Issue](https://github.com/niuteng5618/FastNote/issues).

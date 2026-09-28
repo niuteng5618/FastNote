@@ -54,12 +54,12 @@ FastNote is a lightweight, high-performance local Markdown editor supporting hig
 
 ### Advanced Features
 
-- **AI Assistant** - Writing assistance, polishing, and error correction with Markdown rendering and code highlighting, built-in free AI models ready to use
-- **Full-text / Knowledge-base Search** - Library sidebar quick search supports `:keyword` full-text search and `::keyword` semantic search (requires a flymd-RAG index)
-- **Smart Todo Reminder** - Auto-detect TODOs, push via WeChat, SMS, Email, DingTalk, Feishu, and more
+- **AI Assistant** - Agent-style todo/diary assistant that uses tool_call to organize todos, write diary entries and generate the files automatically; supports custom OpenAI / Anthropic compatible endpoints, with Markdown-rendered replies
+- **Full-text / Knowledge-base Search** - Library sidebar quick search supports `:keyword` full-text search and `::keyword` semantic search (requires the RAG knowledge-base index plugin)
+- **Calendar & Todos** - Built-in diary and todos; auto-detects TODOs, summarizes by day/week/month, and provides diary and meeting-minutes templates
 - **High-Precision PDF/Image Parsing** - Parse to MD or Docx format, supports translation
 - **One-Click Publish** - Supports Typecho / WordPress / Halo blog platforms
-- **Collaborative Editing** - Multi-user real-time collaboration via extension plugin (requires "Collaborative Editing" extension, contact QQ Group 343638913 for details)
+- **Collaborative Editing** - Multi-user real-time collaboration via extension plugin (requires the "Collaborative Editing" extension)
 - **Git Version Control** - Document integration with Git, supports status query, history view, and explicit commits
 - **iframe Embedding** - Supports embedding music, videos, maps, online documents, etc.
 - **Selection-Aware AI** - Right-click menu shortcuts work on selected text only
@@ -67,7 +67,7 @@ FastNote is a lightweight, high-performance local Markdown editor supporting hig
 
 > 💡 The AI Assistant extension installs silently on first launch. If you uninstall it, it won't auto-install again.
 >
-> ⚠️ Built-in AI models are designed to lower the barrier to AI adoption. This app has strict rate limits on built-in models—please do not abuse. [Register a SiliconFlow account](https://cloud.siliconflow.cn/i/X96CT74a) to unlock more powerful models and higher quotas.
+> ⚠️ The AI Assistant requires a custom OpenAI / Anthropic compatible endpoint configured in the extension settings before use.
 
 ### Platform & Format
 
@@ -78,7 +78,7 @@ FastNote is a lightweight, high-performance local Markdown editor supporting hig
 > [!WARNING]
 > **Linux (Arch-based) note**
 > - On Arch / Manjaro and other Arch-based distributions, the AppImage build may show a blank window due to WebKitGTK or GPU driver issues.
-> - Prefer installing via the AUR package `flymd` (for example: `yay -S flymd`).
+> - Prefer the deb package, or build from source.
 >
 > The legacy `deb` → `debtap` / PKGBUILD to pacman conversion workflow is no longer recommended.
 >
@@ -96,7 +96,7 @@ FastNote is a lightweight, high-performance local Markdown editor supporting hig
 
 ### Date-Based Todo Summary
 
-**Generate todos from meeting notes / travel plans / personal notes, push reminders by time and assignee (WeChat/SMS/DingTalk/Feishu, etc.), and summarize todos by day/week/month with built-in templates for diaries and meeting minutes.**
+**Generate todos from meeting notes / travel plans / personal notes with AI, summarize todos by day/week/month, and use built-in templates for diaries and meeting minutes.**
 
 <img width="1065" height="726" alt="Date-based todo summary and reminders" src="https://github.com/user-attachments/assets/dd82577d-eebf-415b-bcd3-96dc3e23ac7e" />
 
@@ -156,12 +156,12 @@ FastNote is a lightweight, high-performance local Markdown editor supporting hig
 
 ### Installation
 
-Download from [Releases](https://github.com/flyhunterl/flymd/releases):
+Download from [Releases](https://github.com/niuteng5618/FastNote/releases):
 
 | Platform | Installation |
 |----------|--------------|
-| **Windows** | `winget install flyhunterl.FlyMD` or download installer |
-| **Linux** | Supports mainstream desktop environments; on Arch-based distributions, we recommend installing via the AUR package `flymd` (for example: `yay -S flymd` or `paru -S flymd`). |
+| **Windows** | Download the installer (NSIS) or the portable build |
+| **Linux** | Supports mainstream desktop environments; deb / AppImage packages are provided. |
 | **macOS** | Supports Intel and Apple Silicon |
 
 <details>
@@ -171,7 +171,7 @@ Due to the app not being notarized by Apple, you may see a "damaged" warning on 
 
 **Method 1: Terminal Command (Recommended)**
 ```bash
-sudo xattr -r -d com.apple.quarantine /Applications/flymd.app
+sudo xattr -r -d com.apple.quarantine /Applications/FastNote.app
 ```
 
 **Method 2: System Settings**
@@ -179,7 +179,7 @@ sudo xattr -r -d com.apple.quarantine /Applications/flymd.app
 2. **Hold Control and click** the app icon, then select "Open"
 3. Click "Open" in the dialog that appears
 
-> ⚠️ FlyMD is open-source with fully transparent code. The "damaged" warning is only because we haven't paid for Apple's code signing.
+> ⚠️ FastNote is open-source with fully transparent code. The "damaged" warning is only because we haven't paid for Apple's code signing.
 
 </details>
 
@@ -215,34 +215,33 @@ sudo xattr -r -d com.apple.quarantine /Applications/flymd.app
 **Library Sidebar Search**:
 - Default: type to filter by filename/path
 - Full-text: type `:keyword` and press Enter (you can continue with “Deep search”)
-- Knowledge-base: type `::keyword` and press Enter (requires flymd-RAG enabled and indexed)
+- Knowledge-base: type `::keyword` and press Enter (requires the RAG knowledge-base index plugin enabled and indexed)
 
 ---
 
 ## Extension Development
 
-FlyMD has a rich plugin ecosystem supporting unlimited functionality extension through plugins.
+FastNote has a rich plugin ecosystem supporting unlimited functionality extension through plugins.
 
 ### Featured Plugins
 
 **AI & Writing**:
-- **AI Assistant** - Writing assistance, polishing and error correction with Markdown rendering and code highlighting, built-in free models ready to use
+- **AI Assistant** - Agent-style todo/diary assistant that uses tool_call to organize todos, write diary entries and generate the files automatically; supports custom OpenAI / Anthropic compatible endpoints
 - **Xiaohongshu Copywriting Generator** - AI-powered Xiaohongshu-style copywriting with one-click polish, expansion and custom prompt templates
 
 **Document Processing**:
 - **High-Precision PDF Parsing** - Use LLM for high-precision PDF parsing to Markdown or Docx, supports handwriting, layout, formulas and tables
 - **Markdown Table Assistant** - Quickly insert Markdown tables at the cursor to structure content efficiently
 
-**Publishing & Reminders**:
+**Publishing**:
 - **Typecho Post Manager** - Pull blog post list from Typecho as local Markdown, filter by time/category, and allow local content to overwrite remote posts
-- **xxtui Todo Push** - Scan incomplete todos in the current document and push them to WeChat, SMS, Email and other channels
 
 **Knowledge Management**:
 - **Backlinks (Bidirectional Links)** - Based on [[title]] syntax to build forward and reverse links between notes, with AI-powered related suggestions
 - **Graph View** - Graph view based on backlinks index that centers on the current note and visualizes its local graph
-- **RAG Knowledge Base Indexing (flymd-RAG)** - Builds vector indexes for local Markdown/TXT and provides semantic search and RAG-ready knowledge base support, integrated with the AI Assistant
+- **RAG Knowledge Base Indexing** - Builds vector indexes for local Markdown/TXT and provides semantic search and RAG-ready knowledge base support, integrated with the AI Assistant
 
-> 👉 [View all extensions](https://flymd.llingfei.com/extensions.html)
+> 👉 [View all extensions](https://github.com/niuteng5618/FastNote)
 
 ### Install Extensions
 
@@ -279,36 +278,9 @@ FlyMD has a rich plugin ecosystem supporting unlimited functionality extension t
 | [KaTeX](https://katex.org/) | Math formula rendering |
 | [Mermaid](https://mermaid.js.org/) | Diagram drawing |
 
-**Ecosystem Partners**:
-
-| Partner | Description | Support Type |
-|---------|-------------|--------------|
-| [SiliconFlow](https://cloud.siliconflow.cn/i/X96CT74a) | Leading AI capability provider | **Free Model Provider** |
-| [XXTUI](https://www.xxtui.com/) | Simple and efficient personal push API | Push Service Support |
-| [x666.me](https://x666.me/register?aff=yUSz) | Quality AI API support with care | Model Service Support |
-
-**Thanks to SiliconFlow for providing free AI model support**:
-
-<a href="https://cloud.siliconflow.cn/i/X96CT74a" target="_blank">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="public/plugins/ai-assistant/Powered-by-dark.png">
-    <source media="(prefers-color-scheme: light)" srcset="public/plugins/ai-assistant/Powered-by-light.png">
-    <img alt="Powered by SiliconFlow" src="public/plugins/ai-assistant/Powered-by-light.png" width="200">
-  </picture>
-</a>
-
 ---
 
 ## Community & Support
-
-### Join the Community
-
-Stay connected for the latest updates, preview builds, and tips:
-
-| Platform | Link |
-|----------|------|
-| QQ Group | 343638913 |
-| Telegram | [t.me/+3SOMbwSbCvIxMGQ9](https://t.me/+3SOMbwSbCvIxMGQ9) |
 
 ### Community Developers
 
@@ -394,18 +366,12 @@ Issues and Pull Requests are welcome!
 
 See: [ROADMAP (English)](ROADMAP.en.md)
 
-### Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=flyhunterl/flymd&type=date&legend=top-left)](https://www.star-history.com/#flyhunterl/flymd&type=date&legend=top-left)
-
 ### License
 
 This project is licensed under the [GNU General Public License v3.0 (GPL-3.0)](LICENSE).
 
 - ✅ **Allowed**: Use, modify, copy, and redistribute for any purpose (including commercial), as long as you comply with GPL-3.0
-- ❗ **Constraint**: If you distribute FlyMD or modified versions (whether paid or free), you must provide the corresponding source code and keep copyright and license notices
-
-For proprietary/commercial use cases that are incompatible with GPL-3.0, contact: flyhunterl <flyhunterl@gmail.com>
+- ❗ **Constraint**: If you distribute FastNote or modified versions (whether paid or free), you must provide the corresponding source code and keep copyright and license notices
 
 Full License: [LICENSE](LICENSE) | Third-Party Components: [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)
 
@@ -414,7 +380,7 @@ Full License: [LICENSE](LICENSE) | Third-Party Components: [THIRD-PARTY-NOTICES.
 <details>
 <summary><strong>macOS says the app is "damaged" and won't open?</strong></summary>
 
-Run: `sudo xattr -r -d com.apple.quarantine /Applications/flymd.app`, or hold Control and click the app then select "Open".
+Run: `sudo xattr -r -d com.apple.quarantine /Applications/FastNote.app`, or hold Control and click the app then select "Open".
 
 </details>
 
@@ -439,17 +405,3 @@ Press `Shift + Right Click` to open the native context menu.
 Not yet—`- [ ]` / `- [x]` checkboxes only work in source/preview modes for now.
 
 </details>
-
----
-
-## Open Source Support
-
-These are stable model providers I personally use.
-
-⭐⭐⭐[rightcode: Highly stable and cost-effective Claude and Codex relay service](https://www.right.codes/register?aff=E8E36524)
-
-
-
-
-
-<img width="300" height="300" alt="image" src="https://github.com/user-attachments/assets/4a716fd5-dc61-4a4f-b968-91626debe8d2" />

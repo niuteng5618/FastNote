@@ -17,7 +17,7 @@
 
 ## 概述
 
-flyMD 提供了灵活的扩展系统，允许开发者通过编写插件来扩展编辑器的功能。插件可以：
+FastNote 提供了灵活的扩展系统，允许开发者通过编写插件来扩展编辑器的功能。插件可以：
 
 - 添加自定义菜单项
 - 访问和修改编辑器内容
@@ -28,7 +28,7 @@ flyMD 提供了灵活的扩展系统，允许开发者通过编写插件来扩�
 
 ### 内置扩展
 
-flyMD 已内置以下扩展：
+FastNote 已内置以下扩展：
 
 1. **图床 (S3/R2)** - 支持将图片上传到 S3/R2 对象存储
 2. **WebDAV 同步** - 支持通过 WebDAV 协议同步文档
@@ -73,7 +73,7 @@ my-plugin/
 - `author`（可选）：作者信息
 - `description`（可选）：插件功能描述
 - `main`（必需）：插件入口文件，默认为 `main.js`
-- `minHostVersion`（可选）：插件要求的 flyMD 最低版本号。如果用户的 flyMD 版本低于此版本，将拒绝安装并提示用户升级
+- `minHostVersion`（可选）：插件要求的 FastNote 最低版本号。如果用户的 FastNote 版本低于此版本，将拒绝安装并提示用户升级
 - `i18n`（可选，推荐）：多语言元数据，按语言代码组织，例如：
   - `i18n.en.name` / `i18n.en.description`：英文名称与描述
   - 当前宿主版本不会强制使用该字段，但未来版本会优先读取；提前填写有利于扩展市场在不同语言下展示更友好的文案
@@ -116,7 +116,7 @@ export function openSettings(context) {
 
 ### 5. 安装插件
 
-在 flyMD 中：
+在 FastNote 中：
 1. 点击菜单栏"扩展"按钮
 2. 在安装扩展输入框中输入：
    - GitHub 仓库：`username/repository` 或 `username/repository@branch`
@@ -144,7 +144,7 @@ my-plugin/
   "name": "示例插件",
   "version": "1.0.0",
   "author": "Your Name <email@example.com>",
-  "description": "这是一个示例插件，展示如何开发 flyMD 扩展",
+  "description": "这是一个示例插件，展示如何开发 FastNote 扩展",
   "main": "main.js",
   "minHostVersion": "0.3.0",
   "homepage": "https://github.com/username/example-plugin",
@@ -154,7 +154,7 @@ my-plugin/
 
 **版本兼容性示例：**
 
-如果你的插件使用了 flyMD 0.3.5 版本才引入的新 API，你可以这样设置：
+如果你的插件使用了 FastNote 0.3.5 版本才引入的新 API，你可以这样设置：
 
 ```json
 {
@@ -162,19 +162,19 @@ my-plugin/
   "name": "高级功能插件",
   "version": "2.0.0",
   "minHostVersion": "0.3.5",
-  "description": "此插件需要 flyMD 0.3.5 或更高版本"
+  "description": "此插件需要 FastNote 0.3.5 或更高版本"
 }
 ```
 
-当用户尝试在 flyMD 0.3.4 或更低版本上安装此插件时，会收到错误提示：
+当用户尝试在 FastNote 0.3.4 或更低版本上安装此插件时，会收到错误提示：
 ```
-此扩展需要 flyMD 0.3.5 或更高版本，当前版本为 0.3.4。
-请先升级 flyMD 再安装此扩展。
+此扩展需要 FastNote 0.3.5 或更高版本，当前版本为 0.3.4。
+请先升级 FastNote 再安装此扩展。
 ```
 
 ## 插件API
 
-插件通过 `context` 对象访问 flyMD 的功能。
+插件通过 `context` 对象访问 FastNote 的功能。
 
 ### context.http
 
@@ -202,7 +202,7 @@ const response = await context.http.fetch('https://api.example.com/post', {
 
 ### context.htmlToMarkdown
 
-使用 flyMD 内置的 HTML → Markdown 转换器，将一段 HTML 文本转换为 Markdown 字符串。  
+使用 FastNote 内置的 HTML → Markdown 转换器，将一段 HTML 文本转换为 Markdown 字符串。  
 适合从外部系统（博客后台 / Web API / 剪贴板等）获取 HTML 内容后，统一落地为本地 Markdown 文件。
 
 ```javascript
@@ -514,7 +514,7 @@ const dispose = context.addRibbonButton({
 
 ### context.showDropdownMenu（新增）
 
-在指定元素旁弹出一个下拉菜单（样式与行为与 flyMD 内置“插件”下拉菜单一致）。
+在指定元素旁弹出一个下拉菜单（样式与行为与 FastNote 内置“插件”下拉菜单一致）。
 
 ```javascript
 const items = [
@@ -734,7 +734,7 @@ context.addContextMenuItem({
 - 右键菜单仅在有扩展注册时才会覆盖浏览器默认菜单
 - **访问原生右键菜单**：按住 `Shift` 键再右键点击，可显示浏览器原生菜单
 - 子菜单支持悬停展开，鼠标移动到带箭头的菜单项上即可展开子菜单
-- **语言切换**：flyMD 支持运行时切换中/英文，内置菜单会自动刷新，但插件自己注册的右键菜单项不会自动更新文案（因为 label 在激活时就已固定）。如果希望菜单文本在切换语言后即时更新，需要监听语言变化事件并重新注册菜单，见下节。
+- **语言切换**：FastNote 支持运行时切换中/英文，内置菜单会自动刷新，但插件自己注册的右键菜单项不会自动更新文案（因为 label 在激活时就已固定）。如果希望菜单文本在切换语言后即时更新，需要监听语言变化事件并重新注册菜单，见下节。
 
 #### 语言切换与菜单刷新
 
@@ -1465,7 +1465,7 @@ context.ui.notice('已打开文档，长度：' + content.length, 'ok');
 ```
 
 **注意：**
-- 仅支持当前 flyMD 支持的文档类型（`md / markdown / txt / pdf`）。
+- 仅支持当前 FastNote 支持的文档类型（`md / markdown / txt / pdf`）。
 - 同样走应用内部的打开流程，会更新当前文档路径、最近文件等状态。
 
 ### context.createStickyNote
@@ -1926,7 +1926,7 @@ export async function activate(context) {
 
 ## 主题扩展（Theme）
 
-flyMD 内置了主题系统，并对外暴露了可选的 Theme 扩展 API，便于插件对“颜色调色板、排版风格、Markdown 渲染风格”进行扩展或覆写。
+FastNote 内置了主题系统，并对外暴露了可选的 Theme 扩展 API，便于插件对“颜色调色板、排版风格、Markdown 渲染风格”进行扩展或覆写。
 
 ### 能力概览
 
@@ -2488,7 +2488,7 @@ export async function activate(context) {
 
 ### Q: 如何调试插件？
 
-A: 使用 `console.log` 输出调试信息，在 flyMD 中按 `F12` 或 `Ctrl+Shift+I` 打开开发者工具查看。
+A: 使用 `console.log` 输出调试信息，在 FastNote 中按 `F12` 或 `Ctrl+Shift+I` 打开开发者工具查看。
 
 ```javascript
 export function activate(context) {
@@ -2522,13 +2522,13 @@ A: 每个插件只能添加一个主菜单项，但可以在菜单项的点击�
 ## 参考资源
 
 - [Typecho Publisher 插件](https://github.com/TGU-HansJack/typecho-publisher-flymd) - 官方示例插件
-- [flyMD GitHub 仓库](https://github.com/flyhunterl/flymd)
+- [FastNote GitHub 仓库](https://github.com/niuteng5618/FastNote)
 - [Tauri 文档](https://tauri.app/)
 
 ## 许可证
 
-本文档遵循与项目一致的许可：飞速MarkDown（flyMD）非商业开源许可协议（NC 1.0），详见 [LICENSE](LICENSE)。
+本文档遵循与项目一致的许可：FastNote（FastNote）非商业开源许可协议（NC 1.0），详见 [LICENSE](LICENSE)。
 
 ---
 
-如有问题或建议，欢迎提交 [Issue](https://github.com/flyhunterl/flymd/issues)。
+如有问题或建议，欢迎提交 [Issue](https://github.com/niuteng5618/FastNote/issues)。

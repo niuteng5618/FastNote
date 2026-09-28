@@ -26,8 +26,8 @@
 构建完成后：
 1. 进入 workflow 运行详情页
 2. 在 **Artifacts** 部分下载：
-   - `flymd-android-debug.zip` (调试版)
-   - `flymd-android-release.zip` (发布版)
+   - `FastNote-android-debug.zip` (调试版)
+   - `FastNote-android-release.zip` (发布版)
 3. 解压后将 APK 安装到 Android 设备
 
 ### 3. 配置 Release 签名（可选）
@@ -38,23 +38,23 @@
 
 | Secret 名称 | 说明 | 示例值 |
 |------------|------|--------|
-| `ANDROID_KEYSTORE_PATH` | Keystore 文件路径 | `android/flymd.keystore` |
+| `ANDROID_KEYSTORE_PATH` | Keystore 文件路径 | `android/fastnote.keystore` |
 | `ANDROID_KEYSTORE_PASSWORD` | Keystore 密码 | `your_keystore_password` |
-| `ANDROID_KEY_ALIAS` | Key 别名 | `flymd` |
+| `ANDROID_KEY_ALIAS` | Key 别名 | `fastnote` |
 | `ANDROID_KEY_PASSWORD` | Key 密码 | `your_key_password` |
 
 **生成 Keystore（本地操作）：**
 ```bash
-keytool -genkey -v -keystore flymd.keystore \
-  -alias flymd \
+keytool -genkey -v -keystore fastnote.keystore \
+  -alias fastnote \
   -keyalg RSA -keysize 2048 -validity 10000
 
-# 将 flymd.keystore 文件 base64 编码后添加到 Secrets
+# 将 fastnote.keystore 文件 base64 编码后添加到 Secrets
 # Linux/macOS:
-base64 flymd.keystore | pbcopy
+base64 fastnote.keystore | pbcopy
 
 # Windows (PowerShell):
-[Convert]::ToBase64String([IO.File]::ReadAllBytes("flymd.keystore")) | clip
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("fastnote.keystore")) | clip
 ```
 
 ---
@@ -121,7 +121,7 @@ npm install -g @tauri-apps/cli
 
 #### 1. 初始化 Android 项目（仅首次）
 ```bash
-cd flymd
+cd FastNote
 npx tauri android init
 ```
 
