@@ -39,7 +39,6 @@ FastNote 是一款轻量级、高性能的本地 Markdown 编辑器,支持 PDF �
 - [核心特性](#核心特性)
 - [功能演示](#功能演示)
 - [PDF高精度解析（插件）](#pdf高精度解析插件)
-- [AI小说引擎（插件）](#ai小说引擎插件)
 - [安卓版（Beta）](#安卓版beta)
 - [快速开始](#快速开始)
 - [扩展开发](#扩展开发)
@@ -67,7 +66,6 @@ FastNote 是一款轻量级、高性能的本地 Markdown 编辑器,支持 PDF �
 - **协同编辑** - 通过扩展插件实现多人实时协同(需安装"协同编辑"扩展)
 - **Git 版本控制** - 文档接入 Git,支持状态查询、历史查看与显式提交
 - **iframe 嵌入** - 支持音乐、视频、地图、在线文档等外部内容
-- **选区感知 AI** - 右键菜单快捷操作可仅作用于选中文本
 - **标签与便签工具** - 标签右键支持新实例打开、重命名,一键生成桌面便签
 
 > 💡 AI 助手扩展会在首次启动后后台静默安装;如卸载,将不会再次自动安装。
@@ -114,13 +112,7 @@ FastNote 是一款轻量级、高性能的本地 Markdown 编辑器,支持 PDF �
 
 **一份会议纪要 / 旅行计划 / 个人笔记 → AI 拟定待办 → 按日/周/月汇总待办事项 → 提供日记、会议纪要等模板**
 
-<img width="1065" height="726" alt="2123769743dff2e78a75b3bc3544fa9e" src="https://github.com/user-attachments/assets/dd82577d-eebf-415b-bcd3-96dc3e23ac7e" />
-
-### AI 对话联动 + 桌面便签
-
-**十种颜色可选 · 透明度自定义 · 支持可视化交互**
-
-<img src="https://github.com/user-attachments/assets/016617fa-1971-4711-8c5e-1398a1b0aa52" alt="AI对话联动推送和便签" width="800">
+<img width="1065" height="726" alt="按日期汇总待办事项" src="https://github.com/user-attachments/assets/dd82577d-eebf-415b-bcd3-96dc3e23ac7e" />
 
 ---
 
@@ -134,30 +126,11 @@ FastNote 是一款轻量级、高性能的本地 Markdown 编辑器,支持 PDF �
 
 ---
 
-## AI小说引擎（插件）
-
-✅ 自动生成至少3个剧情走向
-
-✅ 智能伏笔回收+自动审计
-
-✅ 进度脉络自动更新，多级并发召回
-
-✅ 人物状态管理、章节字数统计，草稿审定，结构清晰
-
-✅ 支持多模型协作 & 可配合Git版本控制插件
-
-✅ 独有后端Agent工具 分段管理，逻辑严密
-
-<img width="970" height="710" alt="AI Novel Engine" src="https://github.com/user-attachments/assets/005545ee-6377-4f5a-9ae8-e21f7f3330d9" />
-
----
-
 ## 安卓版（Beta）
 
 **已适配插件**
 - WebDAV同步
 - Rag知识库
-- 待办推送
 - 待办日记（日记/待办）
 - typecho管理
 - AI助手
@@ -300,78 +273,6 @@ FastNote 拥有丰富的插件生态,支持通过扩展插件无限扩展功能�
 ---
 
 ## 社区与支持
-
-### 社区开发者
-
-<table>
-  <tr>
-    <th>开发者</th>
-    <th>贡献</th>
-  </tr>
-  <tr>
-    <td align="center">
-      <a href="https://github.com/xf959211192">
-        <img src="https://github.com/xf959211192.png" width="40" alt="xf959211192 头像" /><br />
-        <sub><b>xf959211192</b></sub>
-      </a>
-    </td>
-    <td>Telegraph-Image 图床上传</td>
-  </tr>
-  <tr>
-    <td align="center">
-      <a href="https://github.com/Vita0519">
-        <img src="https://github.com/Vita0519.png" width="40" alt="Vita0519 头像" /><br />
-        <sub><b>Vita0519</b></sub>
-      </a>
-    </td>
-    <td>小红书文案生成 AI 文案扩展</td>
-  </tr>
-	  <tr>
-	    <td align="center">
-	      <a href="https://github.com/Integral-Tech">
-	        <img src="https://github.com/Integral-Tech.png" width="40" alt="Integral-Tech 头像" /><br />
-	        <sub><b>Integral-Tech</b></sub>
-	      </a>
-	    </td>
-	    <td>Arch Linux AUR 包维护</td>
-	  </tr>
-	  <tr>
-	    <td align="center">
-	      <a href="https://github.com/qqxt">
-	        <img src="https://github.com/qqxt.png" width="40" alt="qqxt 头像" /><br />
-	        <sub><b>qqxt</b></sub>
-	      </a>
-	    </td>
-	    <td>Web 图床上传</td>
-	  </tr>
-	  <tr>
-	    <td align="center">
-	      <a href="https://github.com/afoovo">
-	        <img src="https://github.com/afoovo.png" width="40" alt="afoovo 头像" /><br />
-	        <sub><b>afoovo</b></sub>
-	      </a>
-	    </td>
-	    <td>翻译选中文本插件</td>
-	  </tr>
-	  <tr>
-	    <td align="center">
-	      <a href="https://github.com/gerrampard">
-	        <img src="https://github.com/gerrampard.png" width="40" alt="gerrampard 头像" /><br />
-	        <sub><b>gerrampard</b></sub>
-	      </a>
-	    </td>
-	    <td>Dinox 同步（dinox-sync）</td>
-	  </tr>
-	  <tr>
-	    <td align="center">
-	      <a href="https://github.com/ooopzlong">
-	        <img src="https://github.com/ooopzlong.png" width="40" alt="ooopzlong 头像" /><br />
-	        <sub><b>ooopzlong</b></sub>
-	      </a>
-	    </td>
-	    <td>文件图标绘制</td>
-	  </tr>
-	</table>
 
 ### 贡献指南
 

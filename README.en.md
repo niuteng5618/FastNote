@@ -36,7 +36,6 @@ FastNote is a lightweight, high-performance local Markdown editor supporting hig
 - [Core Features](#core-features)
 - [Feature Demonstrations](#feature-demonstrations)
 - [PDF High-Precision Parsing (Plugin)](#pdf-high-precision-parsing-plugin)
-- [AI Novel Engine (Plugin)](#ai-novel-engine-plugin)
 - [Android Version (Beta)](#android-version-beta)
 - [Getting Started](#getting-started)
 - [Extension Development](#extension-development)
@@ -64,7 +63,6 @@ FastNote is a lightweight, high-performance local Markdown editor supporting hig
 - **Collaborative Editing** - Multi-user real-time collaboration via extension plugin (requires the "Collaborative Editing" extension)
 - **Git Version Control** - Document integration with Git, supports status query, history view, and explicit commits
 - **iframe Embedding** - Supports embedding music, videos, maps, online documents, etc.
-- **Selection-Aware AI** - Right-click menu shortcuts work on selected text only
 - **Tabs & Sticky Notes Toolkit** - Tab right-click menu supports opening in new instance, renaming files, one-click desktop sticky notes
 
 > 💡 The AI Assistant extension installs silently on first launch. If you uninstall it, it won't auto-install again.
@@ -100,13 +98,7 @@ FastNote is a lightweight, high-performance local Markdown editor supporting hig
 
 **Generate todos from meeting notes / travel plans / personal notes with AI, summarize todos by day/week/month, and use built-in templates for diaries and meeting minutes.**
 
-<img width="1065" height="726" alt="Date-based todo summary and reminders" src="https://github.com/user-attachments/assets/dd82577d-eebf-415b-bcd3-96dc3e23ac7e" />
-
-### AI Dialogue Integration + Desktop Sticky Notes
-
-**Ten Color Options · Customizable Transparency · Interactive Visual Controls**
-
-<img src="https://github.com/user-attachments/assets/016617fa-1971-4711-8c5e-1398a1b0aa52" alt="AI Dialogue Integration and Sticky Notes" width="800">
+<img width="1065" height="726" alt="Date-based todo summary" src="https://github.com/user-attachments/assets/dd82577d-eebf-415b-bcd3-96dc3e23ac7e" />
 
 ---
 
@@ -120,30 +112,11 @@ FastNote is a lightweight, high-performance local Markdown editor supporting hig
 
 ---
 
-## AI Novel Engine (Plugin)
-
-✅ Auto-generate at least 3 plot directions
-
-✅ Smart foreshadowing callback + automatic audit
-
-✅ Automatic progress updates, multi-level concurrent retrieval
-
-✅ Character state management, chapter word count, draft review, clear structure
-
-✅ Support for multi-model collaboration & compatible with Git version control plugin
-
-✅ Unique backend Agent tool for segmented management, rigorous logic
-
-<img width="970" height="710" alt="AI Novel Engine" src="https://github.com/user-attachments/assets/005545ee-6377-4f5a-9ae8-e21f7f3330d9" />
-
----
-
 ## Android Version (Beta)
 
 **Adapted Plugins**
 - WebDAV Sync
 - RAG Knowledge Base
-- Todo Push
 - Todo Diary (Diary/Todo)
 - Typecho Management
 - AI Assistant
@@ -283,78 +256,6 @@ FastNote has a rich plugin ecosystem supporting unlimited functionality extensio
 ---
 
 ## Community & Support
-
-### Community Developers
-
-<table>
-  <tr>
-    <th>Developer</th>
-    <th>Contribution</th>
-  </tr>
-  <tr>
-    <td align="center">
-      <a href="https://github.com/xf959211192">
-        <img src="https://github.com/xf959211192.png" width="40" alt="xf959211192 avatar" /><br />
-        <sub><b>xf959211192</b></sub>
-      </a>
-    </td>
-    <td>Telegraph-Image image hosting uploader</td>
-  </tr>
-  <tr>
-    <td align="center">
-      <a href="https://github.com/Vita0519">
-        <img src="https://github.com/Vita0519.png" width="40" alt="Vita0519 avatar" /><br />
-        <sub><b>Vita0519</b></sub>
-      </a>
-    </td>
-    <td>Xiaohongshu copywriting generator AI extension</td>
-  </tr>
-  <tr>
-    <td align="center">
-      <a href="https://github.com/Integral-Tech">
-        <img src="https://github.com/Integral-Tech.png" width="40" alt="Integral-Tech avatar" /><br />
-        <sub><b>Integral-Tech</b></sub>
-      </a>
-    </td>
-    <td>Arch Linux AUR package maintainer</td>
-  </tr>
-  <tr>
-    <td align="center">
-      <a href="https://github.com/qqxt">
-        <img src="https://github.com/qqxt.png" width="40" alt="qqxt avatar" /><br />
-        <sub><b>qqxt</b></sub>
-      </a>
-    </td>
-    <td>Web image uploader</td>
-  </tr>
-  <tr>
-    <td align="center">
-      <a href="https://github.com/afoovo">
-        <img src="https://github.com/afoovo.png" width="40" alt="afoovo avatar" /><br />
-        <sub><b>afoovo</b></sub>
-      </a>
-    </td>
-    <td>Translate selected text plugin</td>
-  </tr>
-  <tr>
-    <td align="center">
-      <a href="https://github.com/gerrampard">
-        <img src="https://github.com/gerrampard.png" width="40" alt="gerrampard avatar" /><br />
-        <sub><b>gerrampard</b></sub>
-      </a>
-    </td>
-    <td>Dinox Sync (dinox-sync)</td>
-  </tr>
-  <tr>
-    <td align="center">
-      <a href="https://github.com/ooopzlong">
-        <img src="https://github.com/ooopzlong.png" width="40" alt="ooopzlong avatar" /><br />
-        <sub><b>ooopzlong</b></sub>
-      </a>
-    </td>
-    <td>File icon design</td>
-  </tr>
-</table>
 
 ### Contributing
 
