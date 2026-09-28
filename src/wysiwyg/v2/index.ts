@@ -721,6 +721,20 @@ export async function enableWysiwygV2(root: HTMLElement, initialMd: string, onCh
                 }
               })()
             }
+
+            // 兜底：普通粘贴纯文本（无富文本 HTML）时，按 markdown 解析渲染，而非插入原文。
+            // 尊重「粘贴为纯文本」(Ctrl+Shift+V, pasteCombo==='plain')；若前面分支已处理则跳过。
+            if (!ev.defaultPrevented && pasteCombo !== 'plain' && plainText && !html) {
+              ev.preventDefault()
+              try { ev.stopPropagation() } catch {}
+              try { (ev as any).stopImmediatePropagation?.() } catch {}
+              if (!insertMarkdownAtSelection(plainText)) {
+                try {
+                  const view = _getView()
+                  if (view) view.dispatch(view.state.tr.insertText(plainText).scrollIntoView())
+                } catch {}
+              }
+            }
           } catch {}
         }, true)
       } catch {}

@@ -309,8 +309,8 @@ export async function newFolderSafe(dir: string, hint = '新建文件夹'): Prom
   const full = dir + s + n
   await mkdir(full, { recursive: true } as any)
   // 创建一个占位文件，使文件夹在库侧栏中可见
-  const placeholder = full + s + 'README.md'
-  await writeTextFile(placeholder, '# ' + n + '\n\n', {} as any)
+  const placeholder = full + s + '新建文档.md'
+  await writeTextFile(placeholder, '# 标题\n\n', {} as any)
   return full
 }
 

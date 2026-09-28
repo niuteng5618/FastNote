@@ -24,6 +24,8 @@
 
 FastNote 是一款轻量级、高性能的本地 Markdown 编辑器,支持 PDF 高精度解析、AI 待办/日记助手、日历与待办等功能。本地优先,数据安全可控,开箱即用。
 
+> 本项目基于开源项目 [flymd](https://github.com/flyhunterl/flymd) 开发。
+
 <img width="1920" height="1080" alt="hero" src="https://github.com/user-attachments/assets/acf758c1-6c8e-4b4f-a313-d4ce2190394b" />
 
 <p align="center">

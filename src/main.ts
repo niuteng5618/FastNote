@@ -167,7 +167,7 @@ import { initExtensionsPanel, refreshExtensionsUI as panelRefreshExtensionsUI, s
 import { ensureUpdateOverlay, showUpdateOverlayLinux, showUpdateDownloadedOverlay, showInstallFailedOverlay, loadUpdateExtra, renderUpdateDetailsHTML } from './ui/updateOverlay'
 import { initDiaryTasks } from './diaryTasks'
 import { renderTemplatesPanel } from './diaryTasks/settingsPanel'
-import { buildTaskFilePath, writeTaskFile } from './diaryTasks/taskFiles'
+import { buildTaskFilePath, writeTaskFile, DIARY_TASKS_DIR } from './diaryTasks/taskFiles'
 import { loadTemplates, renderTemplate } from './diaryTasks/templates'
 import { openInBrowser, upMsg } from './core/updateUtils'
 import { getUpdateCheckDisabled } from './core/updateCheckPrefs'
@@ -5840,8 +5840,27 @@ async function setLibraryRoot(p: string) {
   // 兼容旧代码：设置库路径即插入/更新库并设为激活
   try {
     clearTemporaryLibraryRoot()
+    // 判断是否为全新库（此前未登记过该 root），仅新库才脚手架目录
+    let isNew = false
+    try {
+      const norm = (s: string) => String(s || '').replace(/[\\/]+$/, '')
+      const libs = await getLibraries()
+      isNew = !libs.some(x => norm(x.root) === norm(p))
+    } catch {}
     await upsertLibrary({ root: p })
+    if (isNew) { try { await scaffoldLibraryDirs(p) } catch {} }
   } catch {}
+}
+
+// 新建库时预建常用目录：图片目录 images/ 与 日历/待办目录（日记与待办）。
+// 幂等：ensureDir 已存在时无副作用；失败静默，不阻塞打开库。
+async function scaffoldLibraryDirs(root: string) {
+  const base = String(root || '').replace(/[\\/]+$/, '')
+  if (!base) return
+  const sep = base.includes('\\') ? '\\' : '/'
+  for (const name of ['images', DIARY_TASKS_DIR]) {
+    try { await ensureDir(base + sep + name) } catch {}
+  }
 }
 
 // —— 大纲滚动同步 ——
@@ -8031,8 +8050,8 @@ async function newFolderSafe(dir: string, name = '新建文件夹'): Promise<str
   const full = dir + sep + n
   await mkdir(full, { recursive: true } as any)
   // 创建一个占位文件，使文件夹在库侧栏中可见
-  const placeholder = full + sep + 'README.md'
-  await writeTextFile(placeholder, '# ' + n + '\n\n', {} as any)
+  const placeholder = full + sep + '新建文档.md'
+  await writeTextFile(placeholder, '# 标题\n\n', {} as any)
   return full
 }async function renderDir(container: HTMLDivElement, dir: string) {
   container.innerHTML = ''

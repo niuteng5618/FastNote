@@ -19,7 +19,9 @@
 
 ## Introduction
 
-FastNote is a lightweight, high-performance local Markdown editor supporting high-precision PDF parsing, AI-assisted writing, and intelligent todo reminders. Local-first, secure data control, ready to use out of the box.
+FastNote is a lightweight, high-performance local Markdown editor supporting high-precision PDF parsing, an AI todo/diary assistant, and a built-in calendar & todos. Local-first, secure data control, ready to use out of the box.
+
+> This project is based on the open-source project [flymd](https://github.com/flyhunterl/flymd).
 
 <img width="1920" height="1080" alt="hero" src="https://github.com/user-attachments/assets/acf758c1-6c8e-4b4f-a313-d4ce2190394b" />
 
