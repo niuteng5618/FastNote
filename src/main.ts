@@ -10917,8 +10917,8 @@ function bindEvents() {
     // 性能标记：首次渲染完成
     performance.mark('flymd-first-render')
     scheduleDeferredStartupWork()
-    // 在线公告（官网 announcements.json）：不阻塞启动，失败静默
-    try { initOnlineAnnouncements() } catch {}
+    // 在线公告：已停用（原从上游 announcements.json 拉取会弹上游推广公告）
+    // try { initOnlineAnnouncements() } catch {}
 
     // 绑定扩展按钮（立即绑定，但延迟加载扩展）
     try { const btnExt = document.getElementById('btn-extensions'); if (btnExt) btnExt.addEventListener('click', () => { void panelShowExtensionsOverlay(true) }) } catch {}

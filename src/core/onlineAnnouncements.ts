@@ -26,7 +26,9 @@ type OnlineAnnouncementPayload =
       items?: OnlineAnnouncement[]
     }
 
-const DEFAULT_URL = 'https://flymd.llingfei.com/announcements.json'
+// 已停用：原上游公告源（flymd.llingfei.com）会推送上游推广公告。
+// 置空后即使被调用也不会拉取任何内容（runOnlineAnnouncements 在 url 为空时直接返回）。
+const DEFAULT_URL = ''
 const LS_SEEN_KEY = 'flymd:onlineAnnouncements:seen:v1'
 const MAX_SEEN_RECORDS = 500
 const FETCH_TIMEOUT_MS = 4500
