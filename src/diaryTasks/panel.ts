@@ -11,16 +11,9 @@ import { openNoteEditorDialog } from './noteEditorDialog'
 import { isTopLayer, popLayer, pushLayer } from './layers'
 import type { DiaryTaskKind } from './templates'
 
-export type XxtuiApi = {
-  pushToXxtui: (title: string, content: string) => Promise<boolean>
-  parseAndCreateReminders: (markdown: string) => Promise<{ success?: number; failed?: number }>
-  createReminder: (...args: any[]) => Promise<any>
-}
-
 export type PanelDeps = {
   getLibraryRoot: () => Promise<string | null>
   openFileByPath: (path: string) => void | Promise<void>
-  getXxtuiApi: () => XxtuiApi | null
   notice: (msg: string, level?: 'ok' | 'err', ms?: number) => void
   confirm: (message: string, title?: string) => Promise<boolean>
 }
@@ -197,19 +190,9 @@ export async function openDiaryTasksPanel(deps: PanelDeps): Promise<void> {
   btnMarkOpen.type = 'button'
   btnMarkOpen.className = 'dt-btn'
   btnMarkOpen.textContent = t('diaryTasks.markOpen')
-  const btnPushNow = document.createElement('button')
-  btnPushNow.type = 'button'
-  btnPushNow.className = 'dt-btn'
-  btnPushNow.textContent = t('diaryTasks.pushXxtui')
-  const btnCreateReminders = document.createElement('button')
-  btnCreateReminders.type = 'button'
-  btnCreateReminders.className = 'dt-btn'
-  btnCreateReminders.textContent = t('diaryTasks.createReminders')
   footer.appendChild(footerInfo)
   footer.appendChild(btnMarkDone)
   footer.appendChild(btnMarkOpen)
-  footer.appendChild(btnPushNow)
-  footer.appendChild(btnCreateReminders)
 
   dialog.appendChild(header)
   dialog.appendChild(body)
@@ -590,8 +573,6 @@ export async function openDiaryTasksPanel(deps: PanelDeps): Promise<void> {
     noteList.style.display = isTodo ? 'none' : ''
     btnMarkDone.style.display = isTodo ? '' : 'none'
     btnMarkOpen.style.display = isTodo ? '' : 'none'
-    btnPushNow.style.display = isTodo ? '' : 'none'
-    btnCreateReminders.style.display = isTodo ? '' : 'none'
     // 日历随 Tab 同步切换（待办 Tab 不显示日记，只日记 Tab 显示紫色日记标签）
     renderLegend()
     renderCalendar()
@@ -791,53 +772,6 @@ export async function openDiaryTasksPanel(deps: PanelDeps): Promise<void> {
   }
   btnMarkDone.onclick = () => { void markTodos(true) }
   btnMarkOpen.onclick = () => { void markTodos(false) }
-
-  btnPushNow.onclick = async () => {
-    const api = deps.getXxtuiApi()
-    if (!api) {
-      deps.notice(t('diaryTasks.err.xxtui'), 'err', 3200)
-      return
-    }
-    const todos = getFilteredTodos().filter((task) => selectedKeys.has(taskKey(task)))
-    if (!todos.length) {
-      deps.notice(t('diaryTasks.err.pushNone'), 'err', 2200)
-      return
-    }
-    const title = t('diaryTasks.title') + ` · ${todos.length}`
-    const content = todos
-      .map((task, idx) => `${idx + 1}. ${task.done ? '[x]' : '[ ]'} ${task.text}${task.date ? ` · ${task.date}` : ''}`)
-      .join('\n')
-    try {
-      const ok = await api.pushToXxtui(title, content)
-      if (ok) deps.notice(t('diaryTasks.pushOk', { n: todos.length }), 'ok', 2600)
-      else deps.notice(t('diaryTasks.err.pushFail'), 'err', 2600)
-    } catch (e) {
-      try { console.error('[diaryTasks] 推送 xxtui 失败', e) } catch {}
-      deps.notice(t('diaryTasks.err.pushFail'), 'err', 2600)
-    }
-  }
-
-  btnCreateReminders.onclick = async () => {
-    const api = deps.getXxtuiApi()
-    if (!api) {
-      deps.notice(t('diaryTasks.err.xxtui'), 'err', 3200)
-      return
-    }
-    const todos = getFilteredTodos().filter((task) => !task.done && selectedKeys.has(taskKey(task)))
-    if (!todos.length) {
-      deps.notice(t('diaryTasks.err.pushNone'), 'err', 2600)
-      return
-    }
-    const md = todos.map((task) => `- [ ] ${task.text}`).join('\n')
-    try {
-      const res = await api.parseAndCreateReminders(md)
-      const succ = typeof res?.success === 'number' ? res.success : 0
-      deps.notice(t('diaryTasks.remindOk', { n: succ }), succ ? 'ok' : 'err', 3200)
-    } catch (e) {
-      try { console.error('[diaryTasks] 创建提醒失败', e) } catch {}
-      deps.notice(t('diaryTasks.err.remindFail'), 'err', 2600)
-    }
-  }
 
   // 初始渲染
   buildYearOptions()

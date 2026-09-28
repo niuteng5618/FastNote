@@ -91,7 +91,6 @@ import {
 } from './modes/focusModeHost'
 import {
   type StickyNoteColor,
-  type StickyNoteReminderMap,
   type StickyNotePrefs,
   STICKY_NOTE_PREFS_FILE,
   STICKY_NOTE_DEFAULT_OPACITY,
@@ -168,6 +167,8 @@ import { initExtensionsPanel, refreshExtensionsUI as panelRefreshExtensionsUI, s
 import { ensureUpdateOverlay, showUpdateOverlayLinux, showUpdateDownloadedOverlay, showInstallFailedOverlay, loadUpdateExtra, renderUpdateDetailsHTML } from './ui/updateOverlay'
 import { initDiaryTasks } from './diaryTasks'
 import { renderTemplatesPanel } from './diaryTasks/settingsPanel'
+import { buildTaskFilePath, writeTaskFile } from './diaryTasks/taskFiles'
+import { loadTemplates, renderTemplate } from './diaryTasks/templates'
 import { openInBrowser, upMsg } from './core/updateUtils'
 import { getUpdateCheckDisabled } from './core/updateCheckPrefs'
 import { getDefaultOutlineTabEnabled } from './core/defaultOutlineTab'
@@ -777,7 +778,6 @@ let stickyNoteOnTop = false    // 窗口置顶
 let stickyTodoAutoPreview = false // 便签快速待办编辑后是否需要自动返回阅读模式
 let stickyNoteOpacity = STICKY_NOTE_DEFAULT_OPACITY   // 窗口透明度
 let stickyNoteColor: StickyNoteColor = STICKY_NOTE_DEFAULT_COLOR  // 便签背景色
-let stickyNoteReminders: StickyNoteReminderMap = {}   // 便签待办提醒状态（按文件+文本标记）
 // 边缘唤醒热区元素（非固定且隐藏时显示，鼠标靠近自动展开库）
 let _libEdgeEl: HTMLDivElement | null = null
 let _libFloatToggleEl: HTMLButtonElement | null = null
@@ -1649,7 +1649,7 @@ app.innerHTML = `
         <button type="button" class="ribbon-btn" id="btn-mode" title="${t('menu.mode')}">${ribbonIcons.layout}</button>
         <div class="mode-pop" id="mode-pop" hidden>
           <button type="button" data-mode-target="source"><span class="mode-mark"></span><span>源码</span><span class="mode-accel">Ctrl+E</span></button>
-          <button type="button" data-mode-target="wysiwyg"><span class="mode-mark"></span><span>所见</span><span class="mode-accel">Ctrl+W</span></button>
+          <button type="button" data-mode-target="wysiwyg"><span class="mode-mark"></span><span>阅读</span><span class="mode-accel">Ctrl+W</span></button>
           <button type="button" data-mode-target="split"><span class="mode-mark"></span><span>分屏</span><span class="mode-accel">Ctrl+Shift+E</span></button>
         </div>
       </div>
@@ -2859,7 +2859,7 @@ async function setWysiwygEnabled(enable: boolean, opts?: SetWysiwygOptions) {
     // 更新按钮提示（统一为简单说明，移除无用快捷键提示）
     try {
       const b = document.getElementById('btn-wysiwyg') as HTMLDivElement | null
-      if (b) b.title = (wysiwyg ? '\u9000\u51fa' : '\u5f00\u542f') + '\u6240\u89c1\u6a21\u5f0f (Ctrl+W)'
+      if (b) b.title = (wysiwyg ? '\u9000\u51fa' : '\u5f00\u542f') + '\u9605\u8bfb\u6a21\u5f0f (Ctrl+W)'
     } catch {}
     // 触发模式变更事件（专注模式侧栏背景跟随）
     try { window.dispatchEvent(new CustomEvent('flymd:mode:changed', { detail: { wysiwyg } })) } catch {}
@@ -4033,8 +4033,8 @@ async function renderPreview(opts?: RenderPreviewOptions) {
         if (opts?.forPrint) await renderKatexPlaceholders(buf, true, seq)
         else { void renderKatexPlaceholders(buf, false, seq) }
       } catch {}
-      // 便签模式：为待办项添加推送和提醒按钮，并自动调整窗口高度
-      try { if (stickyNoteMode) { addStickyTodoButtons(); scheduleAdjustStickyHeight() } } catch {}
+      // 便签模式：预览更新后自动调整窗口高度以适应内容
+      try { if (stickyNoteMode) { scheduleAdjustStickyHeight() } } catch {}
       // 预览更新后自动刷新大纲（节流由内部逻辑与渲染频率保障）
       try { renderOutlinePanel() } catch {}
     } catch {}
@@ -4812,17 +4812,20 @@ async function toggleMode() {
   try { notifyModeChange() } catch {}
 }
 
-// 提取 Ctrl+E 的切换逻辑，供快捷键和其它入口共用
+// 提取 Ctrl+E 的切换逻辑，供快捷键和其它入口共用：源码 ↔ 阅读（所见）
 async function handleToggleModeShortcut() {
+  const flymd = window as any
   if (wysiwyg) {
+    // 阅读（所见）→ 源码
     try { await setWysiwygEnabled(false) } catch {}
     try { notifyModeChange() } catch {}
-    // 更新专注模式侧栏背景色
     setTimeout(() => updateFocusSidebarBg(), 100)
     return
   }
-  await toggleMode()
-  // 更新专注模式侧栏背景色
+  // 源码 → 阅读（所见）；若处于分屏，先退出分屏
+  try { if (flymd.flymdGetSplitPreviewEnabled?.()) flymd.flymdToggleSplitPreview?.() } catch {}
+  try { await setWysiwygEnabled(true) } catch {}
+  try { notifyModeChange() } catch {}
   setTimeout(() => updateFocusSidebarBg(), 100)
 }
 
@@ -6498,6 +6501,58 @@ try {
       } catch { return null }
     }
     ;(window as any).flymdGetCurrentFilePath = () => currentFilePath
+    // 日记与待办桥接：供插件（AI 助手）复用内置目录规范与模板写入待办/日记
+    ;(window as any).flymdDiaryTasks = {
+      today: () => {
+        const d = new Date(); const p = (n: number) => String(n).padStart(2, '0')
+        return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+      },
+      buildPath: async (kind: 'todo' | 'diary', date: string) => {
+        const root = await getLibraryRoot(); if (!root) return null
+        return buildTaskFilePath(root, kind, date)
+      },
+      readFile: async (kind: 'todo' | 'diary', date: string) => {
+        const root = await getLibraryRoot(); if (!root) return null
+        const path = buildTaskFilePath(root, kind, date)
+        try { return { path, content: await readTextFileAnySafe(path as any) } }
+        catch { return { path, content: null } }
+      },
+      writeTodos: async (date: string, items: string[], mode: 'append' | 'replace' = 'append') => {
+        const root = await getLibraryRoot(); if (!root) throw new Error('未设置库目录，无法写入待办')
+        const path = buildTaskFilePath(root, 'todo', date)
+        const lines = (items || []).map((s) => String(s || '').trim()).filter(Boolean)
+          .map((s) => /^-\s*\[[ xX]\]/.test(s) ? s : `- [ ] ${s}`)
+        let existing = ''
+        try { existing = await readTextFileAnySafe(path as any) } catch {}
+        let body: string
+        if (mode === 'replace' || !existing.trim()) {
+          const seed = renderTemplate((await loadTemplates()).todo, 'todo', date).replace(/\n*$/, '')
+          body = seed + '\n' + lines.join('\n') + '\n'
+        } else {
+          body = existing.replace(/\n*$/, '') + '\n' + lines.join('\n') + '\n'
+        }
+        await writeTaskFile(path, body)
+        return path
+      },
+      writeDiary: async (date: string, content: string, mode: 'append' | 'replace' = 'replace') => {
+        const root = await getLibraryRoot(); if (!root) throw new Error('未设置库目录，无法写入日记')
+        const path = buildTaskFilePath(root, 'diary', date)
+        const text = String(content || '').replace(/\n*$/, '')
+        let existing = ''
+        try { existing = await readTextFileAnySafe(path as any) } catch {}
+        let body: string
+        if (mode === 'append' && existing.trim()) {
+          body = existing.replace(/\n*$/, '') + '\n\n' + text + '\n'
+        } else if (mode === 'append') {
+          const seed = renderTemplate((await loadTemplates()).diary, 'diary', date).replace(/\n*$/, '')
+          body = seed + '\n\n' + text + '\n'
+        } else {
+          body = text + '\n'
+        }
+        await writeTaskFile(path, body)
+        return path
+      },
+    }
     ;(window as any).flymdGetDefaultPasteDir = () => getDefaultPasteDir()
     ;(window as any).flymdAlwaysSaveLocalImages = () => getAlwaysSaveLocalImages()
     ;(window as any).flymdPreferRelativeLocalImages = () => getPreferRelativeLocalImages()
@@ -6615,7 +6670,7 @@ try {
           await fileTree.init(treeEl, {
             getRoot: getLibraryRoot,
             onOpenFile: async (p: string) => { await openFile2(p) },
-            onOpenNewFile: async (p: string) => { await openFile2(p); mode = 'edit'; preview.classList.add('hidden'); try { (editor as HTMLTextAreaElement).focus() } catch {} },
+            onOpenNewFile: async (p: string) => { await openFile2(p) },
             onMoved: async (src: string, dst: string) => { try { if (currentFilePath === src) { currentFilePath = dst as any; refreshTitle() } } catch {} },
           })
           fileTreeReady = true
@@ -7518,8 +7573,6 @@ const stickyNotePrefsHost: StickyNotePrefsHost = createStickyNotePrefsHost({
   setOpacity: (v) => { stickyNoteOpacity = v },
   getColor: () => stickyNoteColor,
   setColor: (c) => { stickyNoteColor = c },
-  getReminders: () => stickyNoteReminders,
-  setReminders: (m) => { stickyNoteReminders = m },
 })
 
 const loadStickyNotePrefs = stickyNotePrefsHost.loadStickyNotePrefs
@@ -7628,182 +7681,6 @@ const {
   scheduleAdjustStickyHeight,
   createStickyNoteControls,
 } = stickyNoteUi
-
-// 便签待办按钮与推送/提醒逻辑仍保留在 main.ts，避免在首次拆分时引入过多依赖注入
-
-// 便签模式：为待办项添加推送和提醒按钮
-function addStickyTodoButtons() {
-  try {
-    // 获取预览区所有待办项
-    const taskItems = preview.querySelectorAll('li.task-list-item') as NodeListOf<HTMLLIElement>
-    if (!taskItems || taskItems.length === 0) return
-    const fileKey = currentFilePath || ''
-
-    taskItems.forEach((item, index) => {
-      // 避免重复添加按钮
-      if (item.querySelector('.sticky-todo-actions')) return
-
-      // 获取复选框
-      const checkbox = item.querySelector('input.task-list-item-checkbox') as HTMLInputElement | null
-
-      // 获取原始完整文本（包含时间）
-      const fullText = item.textContent?.trim() || ''
-
-      // 提取时间信息
-      const timePattern = /@\d{4}-\d{2}-\d{2}\s+\d{1,2}:\d{2}(:\d{2})?/
-      const timeMatch = fullText.match(timePattern)
-      const datetimeText = timeMatch ? timeMatch[0] : ''
-
-      // 移除时间后的文本
-      const textWithoutTime = datetimeText ? fullText.replace(timePattern, '').trim() : fullText
-
-      // 重构DOM结构
-      try {
-        // 清空item内容（保留复选框）
-        const childNodes = Array.from(item.childNodes)
-        childNodes.forEach(node => {
-          if (node !== checkbox) {
-            node.remove()
-          }
-        })
-
-        // 创建内容容器
-        const contentDiv = document.createElement('span')
-        contentDiv.className = 'task-content'
-        contentDiv.textContent = textWithoutTime
-        item.appendChild(contentDiv)
-
-        // 如果有时间，添加时间图标
-        if (datetimeText) {
-          const timeIcon = document.createElement('span')
-          timeIcon.className = 'task-time-icon'
-          timeIcon.textContent = '🕐'
-          item.appendChild(timeIcon)
-        }
-      } catch (e) {
-        console.error('[便签模式] 重构DOM失败:', e)
-      }
-
-      // 创建按钮容器
-      const actionsDiv = document.createElement('span')
-      actionsDiv.className = 'sticky-todo-actions'
-
-      // 推送按钮
-      const pushBtn = document.createElement('button')
-      pushBtn.className = 'sticky-todo-btn sticky-todo-push-btn'
-      pushBtn.title = '推送到 xxtui'
-      pushBtn.innerHTML = '📤'
-      pushBtn.addEventListener('click', async (e) => {
-        e.stopPropagation()
-        await handleStickyTodoPush(fullText, index)
-      })
-
-      // 创建提醒按钮
-      const reminderBtn = document.createElement('button')
-      reminderBtn.className = 'sticky-todo-btn sticky-todo-reminder-btn'
-      // 若已有持久化提醒标记，则使用“已创建”状态
-      const hasReminder = !!(fileKey && stickyNoteReminders[fileKey] && stickyNoteReminders[fileKey][fullText])
-      if (hasReminder) {
-        reminderBtn.title = '已创建提醒'
-        reminderBtn.innerHTML = '🔔'
-        reminderBtn.classList.add('sticky-todo-reminder-created')
-      } else {
-        reminderBtn.title = '创建提醒 (@时间)'
-        reminderBtn.innerHTML = '⏰'
-      }
-      reminderBtn.addEventListener('click', async (e) => {
-        e.stopPropagation()
-        await handleStickyTodoReminder(fullText, index, reminderBtn)
-      })
-
-      actionsDiv.appendChild(pushBtn)
-      actionsDiv.appendChild(reminderBtn)
-      item.appendChild(actionsDiv)
-
-      // 创建tooltip显示完整内容
-      try {
-        const tooltip = document.createElement('div')
-        tooltip.className = 'task-tooltip'
-
-        // 如果有时间，显示"内容 + 时间"，否则只显示内容
-        if (datetimeText) {
-          tooltip.textContent = `${textWithoutTime} ${datetimeText}`
-        } else {
-          tooltip.textContent = textWithoutTime
-        }
-
-        item.appendChild(tooltip)
-      } catch (e) {
-        console.error('[便签模式] 创建tooltip失败:', e)
-      }
-    })
-  } catch (e) {
-    console.error('[便签模式] 添加待办按钮失败:', e)
-  }
-}
-
-// 处理便签模式待办项推送
-async function handleStickyTodoPush(todoText: string, index: number) {
-  try {
-    const api = pluginHost.getPluginAPI('xxtui-todo-push')
-    if (!api || !api.pushToXxtui) {
-      alert('xxtui 插件未安装或未启用\n\n请在"插件"菜单中启用 xxtui 插件')
-      return
-    }
-
-    // 调用推送 API
-    const success = await api.pushToXxtui('[TODO]', todoText)
-    if (success) {
-      // 显示成功提示
-      pluginNotice('推送成功', 'ok', 2000)
-    } else {
-      alert('推送失败，请检查 xxtui 配置\n\n请在"插件"菜单 → "待办" → "设置"中配置 API Key')
-    }
-  } catch (e) {
-    console.error('[便签模式] 推送失败:', e)
-    alert('推送失败: ' + (e instanceof Error ? e.message : String(e)))
-  }
-}
-
-// 处理便签模式待办项创建提醒
-async function handleStickyTodoReminder(todoText: string, index: number, btn?: HTMLButtonElement) {
-  try {
-    const api = pluginHost.getPluginAPI('xxtui-todo-push')
-    if (!api || !api.parseAndCreateReminders) {
-      alert('xxtui 插件未安装或未启用\n\n请在"插件"菜单中启用 xxtui 插件')
-      return
-    }
-
-    // 将单条待办文本包装成完整格式，以便插件解析
-    const todoMarkdown = `- [ ] ${todoText}`
-    const result = await api.parseAndCreateReminders(todoMarkdown)
-
-    if (result.success > 0) {
-      pluginNotice(`创建提醒成功: ${result.success} 条`, 'ok', 2000)
-      // 本地标记：当前条目已创建提醒，仅影响本次预览会话
-      try {
-        if (btn) {
-          btn.innerHTML = '🔔'
-          btn.title = '已创建提醒'
-          btn.classList.add('sticky-todo-reminder-created')
-        }
-        const fileKey = currentFilePath || ''
-        if (fileKey) {
-          if (!stickyNoteReminders[fileKey]) stickyNoteReminders[fileKey] = {}
-          stickyNoteReminders[fileKey][todoText] = true
-          await saveStickyNotePrefs({ opacity: stickyNoteOpacity, color: stickyNoteColor, reminders: stickyNoteReminders })
-        }
-      } catch {}
-    } else if (!todoText.includes('@')) {
-      alert('请在待办内容中添加 @时间 格式，例如：\n\n• 开会 @明天 下午3点\n• 写周报 @2025-11-21 09:00\n• 打电话 @2小时后')
-    } else {
-      alert('创建提醒失败，请检查时间格式')
-    }
-  } catch (e) {
-    console.error('[便签模式] 创建提醒失败:', e)
-    alert('创建提醒失败: ' + (e instanceof Error ? e.message : String(e)))
-  }
-}
 
 // 便签模式运行时依赖：由 stickyNote.ts 统一驱动模式切换与窗口行为
 const stickyNoteModeDeps: StickyNoteModeDeps = {
@@ -8037,9 +7914,6 @@ async function renamePathWithDialog(path: string): Promise<string | null> {
         onOpenFile: async (p: string) => { await openFile2(p) },
         onOpenNewFile: async (p: string) => {
           await openFile2(p)
-          mode = 'edit'
-          preview.classList.add('hidden')
-          try { (editor as HTMLTextAreaElement).focus() } catch {}
         },
         onMoved: async (src: string, dst2: string) => {
           try {
@@ -8179,7 +8053,7 @@ async function newFolderSafe(dir: string, name = '新建文件夹'): Promise<str
         row.classList.add('selected')
       })
       row.addEventListener('dragleave', () => { row.classList.remove('selected') })
-      row.addEventListener('drop', async (ev) => { try { ev.preventDefault(); row.classList.remove('selected'); const src = ev.dataTransfer?.getData('text/plain') || ''; if (!src) return; const base = e.path; const sep = base.includes('\\\\') ? '\\\\' : '/'; const dst = base + sep + (src.split(/[\\\\/]+/).pop() || ''); if (src === dst) return; const root = await getLibraryRoot(); if (!root || !isInside(root, src) || !isInside(root, dst)) { alert('仅允许在库目录内移动'); return } if (await exists(dst)) { const ok = await ask('目标已存在，是否覆盖？'); if (!ok) return } await moveFileSafe(src, dst); if (currentFilePath === src) { currentFilePath = dst as any; refreshTitle() } const treeEl = document.getElementById('lib-tree') as HTMLDivElement | null; if (treeEl && !fileTreeReady) { await fileTree.init(treeEl, { getRoot: getLibraryRoot, onOpenFile: async (p: string) => { await openFile2(p) }, onOpenNewFile: async (p: string) => { await openFile2(p); mode='edit'; preview.classList.add('hidden'); try { (editor as HTMLTextAreaElement).focus() } catch {} } }); fileTreeReady = true } else if (treeEl) { await fileTree.refresh() } } catch (e) { showError('移动失败', e) } })
+      row.addEventListener('drop', async (ev) => { try { ev.preventDefault(); row.classList.remove('selected'); const src = ev.dataTransfer?.getData('text/plain') || ''; if (!src) return; const base = e.path; const sep = base.includes('\\\\') ? '\\\\' : '/'; const dst = base + sep + (src.split(/[\\\\/]+/).pop() || ''); if (src === dst) return; const root = await getLibraryRoot(); if (!root || !isInside(root, src) || !isInside(root, dst)) { alert('仅允许在库目录内移动'); return } if (await exists(dst)) { const ok = await ask('目标已存在，是否覆盖？'); if (!ok) return } await moveFileSafe(src, dst); if (currentFilePath === src) { currentFilePath = dst as any; refreshTitle() } const treeEl = document.getElementById('lib-tree') as HTMLDivElement | null; if (treeEl && !fileTreeReady) { await fileTree.init(treeEl, { getRoot: getLibraryRoot, onOpenFile: async (p: string) => { await openFile2(p) }, onOpenNewFile: async (p: string) => { await openFile2(p) } }); fileTreeReady = true } else if (treeEl) { await fileTree.refresh() } } catch (e) { showError('移动失败', e) } })
       container.appendChild(kids)
       let expanded = false
       row.addEventListener('click', async () => {
@@ -8382,24 +8256,12 @@ function showModeMenu() {
         try { notifyModeChange() } catch {}
       }
     } },
-    { label: t('mode.read'), accel: 'Ctrl+R', action: async () => {
-      saveScrollPosition()
-      const wasWysiwyg = wysiwyg
-      if (wasWysiwyg) { try { await setWysiwygEnabled(false) } catch {} }
-      mode = 'preview'
-      try { preview.classList.remove('hidden') } catch {}
-      try { await renderPreview() } catch {}
-      try { syncToggleButton() } catch {}
-      try { updateChromeColorsForMode('preview') } catch {}
-      restoreScrollPosition()
-      try { notifyModeChange() } catch {}
-    } },
     { label: t('mode.wysiwyg'), accel: 'Ctrl+W', action: async () => {
       try { await setWysiwygEnabled(true) } catch {}
       try { notifyModeChange() } catch {}
     } },
     {
-      label: `${splitEnabled ? '✓ ' : ''}源码 + 阅读分屏`,
+      label: `${splitEnabled ? '✓ ' : ''}源码 + 预览分屏`,
       accel: 'Ctrl+Shift+E',
       action: () => {
         try {
@@ -8506,7 +8368,7 @@ async function refreshLibraryUiAndTree(refreshTree = true) {
       await fileTree.init(treeEl, {
         getRoot: getLibraryRoot,
         onOpenFile: async (p: string) => { await openFile2(p) },
-        onOpenNewFile: async (p: string) => { await openFile2(p); mode='edit'; preview.classList.add('hidden'); try { (editor as HTMLTextAreaElement).focus() } catch {} },
+        onOpenNewFile: async (p: string) => { await openFile2(p) },
         onMoved: async (src: string, dst: string) => { try { if (currentFilePath === src) { currentFilePath = dst as any; refreshTitle() } } catch {} }
       })
       fileTreeReady = true
@@ -9952,42 +9814,6 @@ function bindEvents() {
       try { await renderRecentPanel(true) } catch {}
       return
     }
-    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'r') {
-      e.preventDefault();
-      try { e.stopPropagation(); /* 防止编辑器内部再次处理 */ } catch {}
-      try { (e as any).stopImmediatePropagation && (e as any).stopImmediatePropagation() } catch {}
-      saveScrollPosition()  // 保存当前滚动位置
-      try {
-        if (wysiwyg) {
-          // 先确定进入"阅读"(预览)状态，再退出所见，避免退出所见时根据旧 mode 隐藏预览
-          mode = 'preview'
-          try { preview.classList.remove('hidden') } catch {}
-          try { await renderPreview() } catch {}
-          try { await setWysiwygEnabled(false) } catch {}
-          try { syncToggleButton() } catch {}
-          // 更新专注模式侧栏背景色
-          setTimeout(() => updateFocusSidebarBg(), 100);
-          // 更新外圈UI颜色
-          try { updateChromeColorsForMode('preview') } catch {}
-          restoreScrollPosition()  // 恢复滚动位置
-          try { notifyModeChange() } catch {}
-          return
-        }
-      } catch {}
-      if (mode !== 'preview') {
-        mode = 'preview'
-        try { preview.classList.remove('hidden') } catch {}
-        try { await renderPreview() } catch {}
-        try { syncToggleButton() } catch {}
-        // 更新专注模式侧栏背景色
-        setTimeout(() => updateFocusSidebarBg(), 100);
-        // 更新外圈UI颜色
-        try { updateChromeColorsForMode('preview') } catch {}
-        restoreScrollPosition()  // 恢复滚动位置
-        try { notifyModeChange() } catch {}
-      }
-      return
-    }
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'e') {
       e.preventDefault();
       try { e.stopPropagation() } catch {}
@@ -10087,7 +9913,7 @@ function bindEvents() {
       await openFile2(p)
       mode='edit'; preview.classList.add('hidden'); try { (editor as HTMLTextAreaElement).focus() } catch {}
       const treeEl = document.getElementById('lib-tree') as HTMLDivElement | null
-      if (treeEl && !fileTreeReady) { await fileTree.init(treeEl, { getRoot: getLibraryRoot, onOpenFile: async (q: string) => { await openFile2(q) }, onOpenNewFile: async (q: string) => { await openFile2(q); mode='edit'; preview.classList.add('hidden'); try { (editor as HTMLTextAreaElement).focus() } catch {} }, onMoved: async (src: string, dst: string) => { try { if (currentFilePath === src) { currentFilePath = dst as any; refreshTitle() } } catch {} } }); fileTreeReady = true } else if (treeEl) { await fileTree.refresh() }
+      if (treeEl && !fileTreeReady) { await fileTree.init(treeEl, { getRoot: getLibraryRoot, onOpenFile: async (q: string) => { await openFile2(q) }, onOpenNewFile: async (q: string) => { await openFile2(q) }, onMoved: async (src: string, dst: string) => { try { if (currentFilePath === src) { currentFilePath = dst as any; refreshTitle() } } catch {} } }); fileTreeReady = true } else if (treeEl) { await fileTree.refresh() }
       try { const tree = document.getElementById('lib-tree') as HTMLDivElement | null; const nodes = Array.from(tree?.querySelectorAll('.lib-node.lib-dir') || []) as HTMLElement[]; const target = nodes.find(n => (n as any).dataset?.path === dir); if (target) target.dispatchEvent(new MouseEvent('click', { bubbles: true })) } catch {}
       return
     } catch (e) { showError('新建文件失败', e) }
@@ -10116,7 +9942,7 @@ function bindEvents() {
       await fileTree.init(treeEl, {
         getRoot: getLibraryRoot,
         onOpenFile: async (p: string) => { await openFile2(p) },
-        onOpenNewFile: async (p: string) => { await openFile2(p); mode='edit'; preview.classList.add('hidden'); try { (editor as HTMLTextAreaElement).focus() } catch {} },
+        onOpenNewFile: async (p: string) => { await openFile2(p) },
         onMoved: async (src: string, dst: string) => { try { if (currentFilePath === src) { currentFilePath = dst as any; refreshTitle() } } catch {} }
       })
       fileTreeReady = true
@@ -10874,7 +10700,7 @@ function bindEvents() {
     const chooseBtn = document.getElementById('lib-choose') as HTMLButtonElement | null
     const refreshBtn = document.getElementById('lib-refresh') as HTMLButtonElement | null
     if (chooseBtn) chooseBtn.addEventListener('click', guard(async () => { await showLibraryMenu() }))
-  if (refreshBtn) refreshBtn.addEventListener('click', guard(async () => { try { const s = await getLibrarySort(store); fileTree.setSort(s) } catch {} const treeEl = document.getElementById('lib-tree') as HTMLDivElement | null; if (treeEl && !fileTreeReady) { await fileTree.init(treeEl, { getRoot: getLibraryRoot, onOpenFile: async (p: string) => { await openFile2(p) }, onOpenNewFile: async (p: string) => { await openFile2(p); mode='edit'; preview.classList.add('hidden'); try { (editor as HTMLTextAreaElement).focus() } catch {} }, onMoved: async (src: string, dst: string) => { try { if (currentFilePath === src) { currentFilePath = dst as any; refreshTitle() } } catch {} } }); fileTreeReady = true } else if (treeEl) { await fileTree.refresh() } }))
+  if (refreshBtn) refreshBtn.addEventListener('click', guard(async () => { try { const s = await getLibrarySort(store); fileTree.setSort(s) } catch {} const treeEl = document.getElementById('lib-tree') as HTMLDivElement | null; if (treeEl && !fileTreeReady) { await fileTree.init(treeEl, { getRoot: getLibraryRoot, onOpenFile: async (p: string) => { await openFile2(p) }, onOpenNewFile: async (p: string) => { await openFile2(p) }, onMoved: async (src: string, dst: string) => { try { if (currentFilePath === src) { currentFilePath = dst as any; refreshTitle() } } catch {} } }); fileTreeReady = true } else if (treeEl) { await fileTree.refresh() } }))
   } catch {}
   // 监听 Tauri 文件拖放（用于直接打开 .md/.markdown/.txt 文件）
   ;(async () => {
@@ -11350,31 +11176,28 @@ function bindEvents() {
     console.log('应用初始化完成')
     void logInfo('FastNote 应用初始化完成')
 
-    // 检查是否默认启用所见模式（便签模式下不启用，避免覆盖便签的阅读模式样式）
+    // 默认进入阅读（所见）模式（便签模式下不启用，避免覆盖便签的样式）
     try {
-      const WYSIWYG_DEFAULT_KEY = 'flymd:wysiwyg:default'
       const SOURCEMODE_DEFAULT_KEY = 'flymd:sourcemode:default'
-      const wysiwygDefault = localStorage.getItem(WYSIWYG_DEFAULT_KEY) === 'true'
       const sourcemodeDefault = localStorage.getItem(SOURCEMODE_DEFAULT_KEY) === 'true'
       const hasCurrentPdf = !!(currentFilePath && currentFilePath.toLowerCase().endsWith('.pdf'))
 
-      // 若同时存在旧数据冲突，以“源码模式默认”为优先，确保语义明确；
-      // 但若启动时已通过“打开方式”直接打开的是 PDF，则不要在这里强制切到所见模式，避免覆盖 PDF 预览。
-      const shouldEnableWysiwyg = wysiwygDefault && !sourcemodeDefault && !hasCurrentPdf
+      // 各场景默认阅读（所见）：仅当用户显式勾选“默认源码模式”或当前是 PDF 时才不切入。
+      const shouldEnableWysiwyg = !sourcemodeDefault && !hasCurrentPdf
 
       if (shouldEnableWysiwyg && !wysiwyg && !stickyNoteMode) {
         // 延迟一小段时间，确保编辑器已完全初始化
         setTimeout(async () => {
           try {
             await setWysiwygEnabled(true)
-            console.log('[WYSIWYG] 默认启用所见模式')
+            console.log('[WYSIWYG] 默认启用阅读（所见）模式')
           } catch (e) {
-            console.error('[WYSIWYG] 默认启用所见模式失败:', e)
+            console.error('[WYSIWYG] 默认启用阅读（所见）模式失败:', e)
           }
         }, 200)
       }
     } catch (e) {
-      console.error('[WYSIWYG] 检查默认所见模式设置失败:', e)
+      console.error('[WYSIWYG] 检查默认阅读（所见）模式设置失败:', e)
     }
 
     // 延迟更新检查到空闲时间（原本是 5 秒后）
@@ -11497,14 +11320,10 @@ const {
 } = pluginRuntime
 
 // 日记与待办（内置）：Ribbon 日历按钮（由 initDiaryTasks 自建并摆到 AI 助手下方）+ 面板。
-// 依赖插件运行时提供 xxtui 推送 API
 try {
   initDiaryTasks({
     getLibraryRoot: () => getLibraryRoot(),
     openFileByPath: (p: string) => openFile2(p),
-    getXxtuiApi: () => {
-      try { return (pluginHost.getPluginAPI('xxtui-todo-push') as any) || null } catch { return null }
-    },
     notice: (msg: string, level?: 'ok' | 'err', ms?: number) => pluginNotice(msg, level, ms),
     confirm: (message: string, title?: string) => confirmNative(message, title),
   })

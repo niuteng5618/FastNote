@@ -426,10 +426,10 @@ export function showModeChangeNotification(mode: 'edit' | 'preview', isWysiwyg: 
     let msg: string
     if (isWysiwyg) {
       type = 'mode-wysiwyg'
-      msg = '所见模式'
+      msg = '阅读模式'
     } else if (mode === 'preview') {
       type = 'mode-preview'
-      msg = '阅读模式'
+      msg = '预览模式'
     } else {
       type = 'mode-edit'
       msg = '源码模式'

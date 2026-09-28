@@ -2,7 +2,7 @@
   "id": "doc-mindmap",
   "name": "文档脑图（Markmap）",
   "version": "0.2.1",
-  "author": "flyMD",
+  "author": "FastNote",
   "description": "将当前 Markdown 文档渲染为 Markmap 风格脑图，在右侧停靠面板预览；支持全屏遮挡查看与导出 SVG/PNG；点击节点可跳转文档位置。",
   "assets": [
     "assets/d3.min.js",

@@ -109,11 +109,6 @@ const MARKET_OFFICIAL_I18N: Record<string, { name: string; author: string; desc:
     author: 'ext.typechoManager.author',
     desc: 'ext.typechoManager.desc',
   },
-  'xxtui-todo-push': {
-    name: 'ext.todoPush.name',
-    author: 'ext.todoPush.author',
-    desc: 'ext.todoPush.desc',
-  },
   mineru: {
     name: 'ext.mineru.name',
     author: 'ext.mineru.author',
@@ -185,9 +180,11 @@ function normalizeAuthor(raw?: string | null): string {
 function isOfficialAuthor(raw?: string | null): boolean {
   const v = normalizeAuthor(raw)
   if (!v) return false
-  // 规则：作者包含 flymd / 飞速markdown 即视为官方
-  // 但只接受“以 flymd / 飞速markdown 开头”，避免“adapted from flymd ...”这类误判
-  return v.startsWith('flymd') || v.startsWith('飞速markdown')
+  // 规则：作者以 fastnote / flymd / 飞速markdown 开头即视为官方
+  // - fastnote：本产品品牌
+  // - flymd / 飞速markdown：上游/历史署名，保留兼容（市场索引仍可能返回旧署名）
+  // 只接受“以其开头”，避免“adapted from flymd ...”这类误判
+  return v.startsWith('fastnote') || v.startsWith('flymd') || v.startsWith('飞速markdown')
 }
 
 function getVendorKindByAuthor(author?: string | null): VendorKind {

@@ -141,7 +141,7 @@ export function createStickyNoteUi(deps: StickyNoteUiDeps): StickyNoteUiHandles 
       // 所见模式下风险较高：暂不支持，避免破坏 WYSIWYG 状态
       if (deps.isWysiwygActive()) {
         try {
-          alert('当前所见模式下暂不支持快速待办插入，请先切换回源码模式。')
+          alert('当前阅读模式下暂不支持快速待办插入，请先切换回源码模式。')
         } catch {}
         return
       }

@@ -2,7 +2,7 @@
   "id": "context-menu-demo",
   "name": "右键菜单演示",
   "version": "1.0.0",
-  "author": "flyMD Team",
+  "author": "FastNote Team",
   "description": "演示右键菜单 API 的使用，包括文本转换、格式化等功能",
   "i18n": {
     "en": {

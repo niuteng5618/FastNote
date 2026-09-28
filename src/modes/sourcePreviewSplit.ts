@@ -180,9 +180,9 @@ function setSplitEnabled(enabled: boolean, deps: SplitDeps): void {
       const flymd = getFlymd()
       const { mode, wysiwyg } = getModeState()
       if (isStickyNoteMode()) {
-        alert('便签模式下暂不支持源码+阅读分屏')
+        alert('便签模式下暂不支持源码+预览分屏')
       } else if (wysiwyg) {
-        alert('所见模式下暂不支持源码+阅读分屏')
+        alert('阅读模式下暂不支持源码+预览分屏')
       } else if (mode === 'preview') {
         restorePreviewRatio = getScrollRatio(preview)
         const ok = typeof flymd.flymdEnterEditModeForSplit === 'function'

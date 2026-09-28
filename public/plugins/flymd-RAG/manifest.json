@@ -2,7 +2,7 @@
   "id": "flymd-RAG",
   "name": "flymd-RAG 知识库索引",
   "version": "0.1.6",
-  "author": "flyMD",
+  "author": "FastNote",
   "description": "为本地 md/markdown/txt + Office(docx/xlsx/xls 构建向量索引，提供语义检索（RAG 基础能力）。",
   "i18n": {
     "en": {

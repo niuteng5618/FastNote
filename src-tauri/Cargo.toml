@@ -2,7 +2,7 @@
 name = "flymd"
 version = "1.0.1"
 description = "FastNote 轻量笔记"
-authors = ["flymd"]
+authors = ["FastNote"]
 edition = "2021"
 rust-version = "1.70"
 

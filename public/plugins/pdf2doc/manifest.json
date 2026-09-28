@@ -2,7 +2,7 @@
   "id": "pdf2doc",
   "name": "PDF及图片高精度解析",
   "version": "0.2.8",
-  "author": "flyMD",
+  "author": "FastNote",
   "description": "使用大模型高精度识别解析 PDF 和图片为 Markdown 或 Docx并翻译。支持识别手写、布局还原（仅 MD）、公式识别、表格识别",
   "i18n": {
     "en": {

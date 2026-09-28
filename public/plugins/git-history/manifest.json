@@ -2,7 +2,7 @@
   "id": "git-history",
   "name": "Git 版本管理",
   "version": "0.1.4",
-  "author": "flyMD",
+  "author": "FastNote",
   "description": "为当前库和文档提供 Git 快照与历史查看侧栏。",
   "i18n": {
     "en": {

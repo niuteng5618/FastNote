@@ -1,8 +1,8 @@
-# flyMD Plugin Development Documentation
+# FastNote Plugin Development Documentation
 
 [简体中文](plugin.md) | [English](plugin.en.md)
 
-> This document describes how to develop plugins for flyMD
+> This document describes how to develop plugins for FastNote
 
 ## Table of Contents
 

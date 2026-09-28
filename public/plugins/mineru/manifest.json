@@ -2,7 +2,7 @@
   "id": "mineru",
   "name": "MinerU PDF/图片解析",
   "version": "0.1.1",
-  "author": "flyMD",
+  "author": "FastNote",
   "description": "使用 MinerU 官方 API，对 PDF / 图片进行解析。",
   "i18n": {
     "en": {

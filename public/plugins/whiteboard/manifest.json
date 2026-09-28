@@ -2,7 +2,7 @@
   "id": "whiteboard-view",
   "name": "白板视图",
   "version": "0.1.0",
-  "author": "flyMD",
+  "author": "FastNote",
   "description": "在可视化画布上摆放 Markdown 笔记节点并建立简单连接。",
   "i18n": {
     "en": {
@@ -13,4 +13,3 @@
   "homepage": "https://github.com/flyhunterl/flymd",
   "main": "main.js"
 }
-

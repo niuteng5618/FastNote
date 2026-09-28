@@ -1,8 +1,8 @@
-# flyMD 扩展开发文档
+# FastNote 扩展开发文档
 
 [简体中文](plugin.md) | [English](plugin.en.md)
 
-> 本文档介绍如何为 flyMD 开发扩展插件
+> 本文档介绍如何为 FastNote 开发扩展插件
 
 ## 目录
 

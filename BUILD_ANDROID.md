@@ -1,8 +1,8 @@
-# flyMD Android 构建指南
+# FastNote Android 构建指南
 
 ## 概述
 
-本文档说明如何构建 flyMD 的 Android 版本。Android 分支包含了所有必要的平台适配代码，支持：
+本文档说明如何构建 FastNote 的 Android 版本。Android 分支包含了所有必要的平台适配代码，支持：
 - ✅ SAF（Storage Access Framework）文件访问
 - ✅ 移动端 UI（FAB、抽屉式文件库）
 - ✅ 虚拟键盘适配

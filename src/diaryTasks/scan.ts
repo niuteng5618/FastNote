@@ -1,6 +1,6 @@
 // 扫描当前库，产出待办 / 日记 / 每日统计
 // 数据模型（不引入新存储）：
-//   待办 = 全库 .md 里的 - [ ] / - [x]（与 xxtui-todo-push 同规则）
+//   待办 = 全库 .md 里的 - [ ] / - [x]
 //   待办日期回退链：行内 @YYYY-MM-DD → front matter date/created → 文件名 YYYY-MM-DD → 文件 mtime
 //   日记 = 非「-待办」文件，且（front matter 有 date/created 或文件名以 YYYY-MM-DD 开头）
 // 待办日期与日记日期分开计算：共用一个日期会让 -待办.md 的 mtime 污染日历和日记 Tab

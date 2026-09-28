@@ -2,7 +2,7 @@
   "id": "local-collab-os",
   "name": "协同编辑",
   "version": "0.1.8",
-  "author": "flyMD",
+  "author": "FastNote",
   "description": "连接协同服务器的简单多人协同插件",
   "i18n": {
     "en": {

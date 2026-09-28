@@ -1,20 +1,16 @@
 {
   "id": "ai-assistant",
   "name": "AI 助手",
-  "version": "0.4.8",
-  "author": "flyMD",
-  "description": "多供应商 AI 写作助手",
+  "version": "0.5.0",
+  "author": "FastNote",
+  "description": "AI 助手：填写待办、编写日记并自动生成文件（Agent / tool_call）",
   "i18n": {
     "en": {
       "name": "AI Assistant",
-      "description": "Multi-provider AI writing assistant"
+      "description": "Agent that fills todos and writes diary entries into your library (tool_call)"
     }
   },
-  "homepage": "https://github.com/flyhunterl/flymd",
+  "homepage": "https://github.com/niuteng5618/FastNote",
   "main": "main.js",
-  "assets": [
-    "Flymdnew.png",
-    "Powered-by-dark.png",
-    "Powered-by-light.png"
-  ]
+  "assets": []
 }

@@ -2,7 +2,7 @@
   "id": "property-view",
   "name": "属性视图",
   "version": "0.1.0",
-  "author": "flyMD",
+  "author": "FastNote",
   "description": "基于 YAML 元数据和标签的属性查询与列表视图",
   "i18n": {
     "en": {
@@ -13,4 +13,3 @@
   "homepage": "https://github.com/flyhunterl/flymd",
   "main": "main.js"
 }
-

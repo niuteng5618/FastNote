@@ -4,7 +4,6 @@ import type { Store } from '@tauri-apps/plugin-store'
 import {
   type StickyNotePrefs,
   type StickyNoteColor,
-  type StickyNoteReminderMap,
   type StickyNotePrefsDeps,
   loadStickyNotePrefsCore,
   saveStickyNotePrefsCore,
@@ -22,9 +21,6 @@ export type StickyNotePrefsHostDeps = {
   setOpacity: (v: number) => void
   getColor: () => StickyNoteColor
   setColor: (c: StickyNoteColor) => void
-
-  getReminders: () => StickyNoteReminderMap
-  setReminders: (m: StickyNoteReminderMap) => void
 }
 
 export type StickyNotePrefsHost = {
@@ -45,24 +41,18 @@ export function createStickyNotePrefsHost(deps: StickyNotePrefsHostDeps): Sticky
   }
 
   async function loadStickyNotePrefs(): Promise<StickyNotePrefs> {
-    const { prefs, reminders } = await loadStickyNotePrefsCore(coreDeps)
-    deps.setReminders(reminders)
+    const prefs = await loadStickyNotePrefsCore(coreDeps)
     deps.setOpacity(prefs.opacity)
     deps.setColor(prefs.color)
-    return { ...prefs, reminders }
+    return { ...prefs }
   }
 
   async function saveStickyNotePrefs(prefs: StickyNotePrefs, skipStore = false): Promise<void> {
-    const reminders = prefs.reminders ?? deps.getReminders()
-    if (reminders && typeof reminders === 'object') {
-      deps.setReminders(reminders)
-    }
     if (typeof prefs.opacity === 'number') deps.setOpacity(prefs.opacity)
     if (prefs.color) deps.setColor(prefs.color as StickyNoteColor)
     await saveStickyNotePrefsCore(
       coreDeps,
       { opacity: deps.getOpacity(), color: deps.getColor() },
-      deps.getReminders(),
       skipStore,
     )
   }

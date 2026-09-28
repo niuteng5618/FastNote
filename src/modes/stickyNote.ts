@@ -14,12 +14,9 @@ export type StickyNoteColor =
   | 'purple'
   | 'red'
 
-export type StickyNoteReminderMap = Record<string, Record<string, boolean>>
-
 export type StickyNotePrefs = {
   opacity: number
   color: StickyNoteColor
-  reminders?: StickyNoteReminderMap
 }
 
 // 便签模式配置文件（仅存储颜色和透明度）
@@ -50,10 +47,7 @@ export type StickyNotePrefsDeps = {
   getStore: () => Store | null | Promise<Store | null>
 }
 
-export type StickyNotePrefsResult = {
-  prefs: StickyNotePrefs
-  reminders: StickyNoteReminderMap
-}
+export type StickyNotePrefsResult = StickyNotePrefs
 
 async function getPrefsPath(deps: StickyNotePrefsDeps): Promise<string> {
   try {
@@ -91,22 +85,7 @@ export async function loadStickyNotePrefsCore(
         ? (rawColor as StickyNoteColor)
         : STICKY_NOTE_DEFAULT_COLOR
 
-      let reminders: StickyNoteReminderMap = {}
-      try {
-        if (obj && typeof obj.reminders === 'object' && obj.reminders !== null) {
-          const map: StickyNoteReminderMap = {}
-          for (const [file, v] of Object.entries(obj.reminders as any)) {
-            if (!v || typeof v !== 'object') continue
-            const inner: Record<string, boolean> = {}
-            for (const [k, flag] of Object.entries(v as any)) {
-              if (flag === true) inner[k] = true
-            }
-            if (Object.keys(inner).length > 0) map[file] = inner
-          }
-          reminders = map
-        }
-      } catch {}
-      return { prefs: { opacity, color }, reminders }
+      return { opacity, color }
     }
   } catch {}
 
@@ -133,19 +112,16 @@ export async function loadStickyNotePrefsCore(
       }
       const prefs: StickyNotePrefs = { opacity, color }
       try {
-        await saveStickyNotePrefsCore(deps, prefs, {}, true)
+        await saveStickyNotePrefsCore(deps, prefs, true)
       } catch {}
-      return { prefs, reminders: {} }
+      return prefs
     }
   } catch {}
 
   // 3) 默认值
   return {
-    prefs: {
-      opacity: STICKY_NOTE_DEFAULT_OPACITY,
-      color: STICKY_NOTE_DEFAULT_COLOR,
-    },
-    reminders: {},
+    opacity: STICKY_NOTE_DEFAULT_OPACITY,
+    color: STICKY_NOTE_DEFAULT_COLOR,
   }
 }
 
@@ -153,7 +129,6 @@ export async function loadStickyNotePrefsCore(
 export async function saveStickyNotePrefsCore(
   deps: StickyNotePrefsDeps,
   prefs: StickyNotePrefs,
-  reminders: StickyNoteReminderMap,
   skipStore = false,
 ): Promise<void> {
   const opacity = Math.max(
@@ -165,20 +140,6 @@ export async function saveStickyNotePrefsCore(
     : STICKY_NOTE_DEFAULT_COLOR
 
   const safe: StickyNotePrefs = { opacity, color }
-  const cleanReminders: StickyNoteReminderMap = {}
-  if (reminders && typeof reminders === 'object') {
-    for (const [file, v] of Object.entries(reminders)) {
-      if (!v || typeof v !== 'object') continue
-      const inner: Record<string, boolean> = {}
-      for (const [k, flag] of Object.entries(v)) {
-        if (flag) inner[k] = true
-      }
-      if (Object.keys(inner).length > 0) cleanReminders[file] = inner
-    }
-  }
-  if (Object.keys(cleanReminders).length > 0) {
-    safe.reminders = cleanReminders
-  }
 
   try {
     const path = await getPrefsPath(deps)
@@ -323,7 +284,7 @@ export async function enterStickyNoteModeCore(
     deps.logError('切换亮色模式失败', e)
   }
 
-  // 1. 预先加载便签配置（透明度 / 颜色 / 提醒状态）
+  // 1. 预先加载便签配置（透明度 / 颜色）
   let opacity = STICKY_NOTE_DEFAULT_OPACITY
   let color: StickyNoteColor = STICKY_NOTE_DEFAULT_COLOR
   try {

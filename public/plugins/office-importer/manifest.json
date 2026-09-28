@@ -2,7 +2,7 @@
   "id": "office-importer",
   "name": "Word/Excel 导入工具",
   "version": "0.1.2",
-  "author": "flyMD",
+  "author": "FastNote",
   "description": "将本地 Word (docx) 和 Excel (xlsx) 文件转换为 Markdown 导入当前文档库。",
   "i18n": {
     "en": {

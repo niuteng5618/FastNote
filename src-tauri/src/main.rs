@@ -2179,7 +2179,7 @@ async fn check_update(_force: Option<bool>, include_prerelease: Option<bool>) ->
 
   // 节流留空：简单实现始终请求（前端可决定调用频率）
 
-  let url = "https://api.github.com/repos/flyhunterl/flymd/releases";
+  let url = "https://api.github.com/repos/niuteng5618/FastNote/releases";
   let client = reqwest::Client::builder()
     .user_agent("flymd-updater")
     .timeout(Duration::from_secs(10))

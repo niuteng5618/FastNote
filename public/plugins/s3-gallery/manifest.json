@@ -2,7 +2,7 @@
   "id": "s3-gallery",
   "name": "图床相册",
   "version": "0.1.8",
-  "author": "flyMD",
+  "author": "FastNote",
   "description": "查看并管理通过内置图床上传的图片，支持复制链接、插入当前文档以及删除远端对象。",
   "i18n": {
     "en": {

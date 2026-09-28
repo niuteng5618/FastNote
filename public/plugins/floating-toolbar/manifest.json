@@ -2,7 +2,7 @@
   "id": "floating-toolbar",
   "name": "智能悬浮工具条",
   "version": "0.1.6",
-  "author": "flyMD",
+  "author": "FastNote",
   "description": "选中文本后自动弹出的富文本工具条，支持自定义标题快捷键（默认Ctrl+1~6 标题）",
   "i18n": {
     "en": {

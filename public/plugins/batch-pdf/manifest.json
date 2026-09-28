@@ -2,7 +2,7 @@
   "id": "batch-pdf",
   "name": "批量导出 PDF",
   "version": "0.1.0",
-  "author": "flyMD",
+  "author": "FastNote",
   "description": "一次选择多个文档并批量导出为 PDF",
   "i18n": {
     "en": {

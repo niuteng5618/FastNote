@@ -6,32 +6,30 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/flyhunterl/flymd/releases/latest"><img src="https://img.shields.io/github/v/release/flyhunterl/flymd" alt="GitHub Release" /></a>
-  <a href="https://github.com/flyhunterl/flymd/releases/latest"><img src="https://img.shields.io/github/release-date/flyhunterl/flymd" alt="Release Date" /></a>
-  <a href="https://github.com/flyhunterl/flymd/actions/workflows/build.yml"><img src="https://github.com/flyhunterl/flymd/actions/workflows/build.yml/badge.svg" alt="Build Status" /></a>
-  <a href="https://github.com/flyhunterl/flymd/stargazers"><img src="https://img.shields.io/github/stars/flyhunterl/flymd" alt="GitHub Stars" /></a>
-  <img src="https://img.shields.io/github/downloads/flyhunterl/flymd/total" alt="GitHub Downloads" />
+  <a href="https://github.com/niuteng5618/FastNote/releases/latest"><img src="https://img.shields.io/github/v/release/niuteng5618/FastNote" alt="GitHub Release" /></a>
+  <a href="https://github.com/niuteng5618/FastNote/releases/latest"><img src="https://img.shields.io/github/release-date/niuteng5618/FastNote" alt="Release Date" /></a>
+  <a href="https://github.com/niuteng5618/FastNote/actions/workflows/build.yml"><img src="https://github.com/niuteng5618/FastNote/actions/workflows/build.yml/badge.svg" alt="Build Status" /></a>
+  <a href="https://github.com/niuteng5618/FastNote/stargazers"><img src="https://img.shields.io/github/stars/niuteng5618/FastNote" alt="GitHub Stars" /></a>
+  <img src="https://img.shields.io/github/downloads/niuteng5618/FastNote/total" alt="GitHub Downloads" />
 </p>
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-green" alt="License: GPL-3.0" /></a>
-  <a href="https://github.com/flyhunterl/flymd"><img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg" alt="Platform" /></a>
-  <a href="https://github.com/microsoft/winget-pkgs/tree/master/manifests/f/flyhunterl/FlyMD"><img src="https://img.shields.io/badge/winget-flyhunterl.FlyMD-blue" alt="Winget" /></a>
-  <a href="https://t.me/+3SOMbwSbCvIxMGQ9"><img src="https://img.shields.io/badge/Telegram-Join-blue?logo=telegram&logoColor=white" alt="Telegram 社区" /></a>
+  <a href="https://github.com/niuteng5618/FastNote"><img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg" alt="Platform" /></a>
 </p>
 
 ---
 
 ## 简介
 
-FlyMD 是一款轻量级、高性能的本地 Markdown 编辑器,支持 PDF 高精度解析、AI 辅助写作、智能待办提醒等功能。本地优先,数据安全可控,开箱即用。
+FastNote 是一款轻量级、高性能的本地 Markdown 编辑器,支持 PDF 高精度解析、AI 辅助写作、智能待办提醒等功能。本地优先,数据安全可控,开箱即用。
 
 <img width="1920" height="1080" alt="hero" src="https://github.com/user-attachments/assets/acf758c1-6c8e-4b4f-a313-d4ce2190394b" />
 
 <p align="center">
-  <a href="https://github.com/flyhunterl/flymd/releases/latest">下载桌面版（Windows / macOS / Linux）</a>
+  <a href="https://github.com/niuteng5618/FastNote/releases/latest">下载桌面版（Windows / macOS / Linux）</a>
   ·
-  <a href="https://github.com/flyhunterl/flymd/releases?q=android&expanded=true">下载安卓版（Beta）</a>
+  <a href="https://github.com/niuteng5618/FastNote/releases?q=android&expanded=true">下载安卓版（Beta）</a>
 </p>
 
 ## 目录

@@ -644,13 +644,6 @@ function createPanel(): HTMLDivElement {
             <span class="theme-toggle-slider"></span>
           </div>
         </label>
-        <label class="theme-toggle-label theme-toggle-third theme-toggle-boxed" for="wysiwyg-default-toggle">
-          <span class="theme-toggle-text">${t('theme.wysiwygMode')}</span>
-          <div class="theme-toggle-switch">
-            <input type="checkbox" id="wysiwyg-default-toggle" class="theme-toggle-input" />
-            <span class="theme-toggle-slider"></span>
-          </div>
-        </label>
         <label class="theme-toggle-label theme-toggle-third theme-toggle-boxed" for="sourcemode-default-toggle">
           <span class="theme-toggle-text">${t('theme.sourceMode')}</span>
           <div class="theme-toggle-switch">
@@ -1584,8 +1577,7 @@ export function ensureThemePanelReady(): HTMLDivElement | null {
         } catch {}
       }
 
-    // 默认模式相关开关（所见 / 源码）
-    const wysiwygDefaultToggle = panel.querySelector('#wysiwyg-default-toggle') as HTMLInputElement | null
+    // 默认模式相关开关（源码；阅读为默认，无需开关）
     const sourcemodeDefaultToggle = panel.querySelector('#sourcemode-default-toggle') as HTMLInputElement | null
     const sourceLineNumbersToggle = panel.querySelector('#source-line-numbers-toggle') as HTMLInputElement | null
     const defaultOutlineTabToggle = panel.querySelector('#default-outline-tab-toggle') as HTMLInputElement | null
@@ -1595,24 +1587,8 @@ export function ensureThemePanelReady(): HTMLDivElement | null {
     const pasteRemoteImagesToggle = panel.querySelector('#paste-remote-images-toggle') as HTMLInputElement | null
     const updateCheckDisabledToggle = panel.querySelector('#update-check-disabled-toggle') as HTMLInputElement | null
 
-    const WYSIWYG_DEFAULT_KEY = 'flymd:wysiwyg:default'
     const SOURCEMODE_DEFAULT_KEY = 'flymd:sourcemode:default'
     const WYSIWYG_HTML_TABLE_TO_MD_KEY = 'flymd:wysiwyg:htmlTableToMd'
-
-    const getWysiwygDefault = (): boolean => {
-      try {
-        const v = localStorage.getItem(WYSIWYG_DEFAULT_KEY)
-        return v === 'true'
-      } catch { return false }
-    }
-
-    const setWysiwygDefault = (enabled: boolean) => {
-      try {
-        localStorage.setItem(WYSIWYG_DEFAULT_KEY, enabled ? 'true' : 'false')
-        const ev = new CustomEvent('flymd:wysiwyg:default', { detail: { enabled } })
-        window.dispatchEvent(ev)
-      } catch {}
-    }
 
     const getSourcemodeDefault = (): boolean => {
       try {
@@ -1644,29 +1620,7 @@ export function ensureThemePanelReady(): HTMLDivElement | null {
       } catch {}
     }
 
-    // 默认使用所见模式开关
-    if (wysiwygDefaultToggle) {
-      // 初始化开关状态
-      wysiwygDefaultToggle.checked = getWysiwygDefault()
-      // 监听开关变化
-      wysiwygDefaultToggle.addEventListener('change', () => {
-        const enabled = wysiwygDefaultToggle.checked
-
-        // 互斥：所见模式打开时，强制关闭源码模式
-        if (enabled && sourcemodeDefaultToggle && sourcemodeDefaultToggle.checked) {
-          sourcemodeDefaultToggle.checked = false
-          try {
-            localStorage.setItem(SOURCEMODE_DEFAULT_KEY, 'false')
-            const ev = new CustomEvent('flymd:sourcemode:default', { detail: { enabled: false } })
-            window.dispatchEvent(ev)
-          } catch {}
-        }
-
-        setWysiwygDefault(enabled)
-      })
-    }
-
-    // 默认使用源码模式开关
+    // 默认使用源码模式开关（关闭即为默认阅读模式）
     if (sourcemodeDefaultToggle) {
       // 初始化开关状态
       sourcemodeDefaultToggle.checked = getSourcemodeDefault()
@@ -1674,17 +1628,6 @@ export function ensureThemePanelReady(): HTMLDivElement | null {
       // 监听开关变化
       sourcemodeDefaultToggle.addEventListener('change', () => {
         const enabled = sourcemodeDefaultToggle.checked
-
-        // 互斥：源码模式打开时，强制关闭所见模式
-        if (enabled && wysiwygDefaultToggle && wysiwygDefaultToggle.checked) {
-          wysiwygDefaultToggle.checked = false
-          try {
-            localStorage.setItem(WYSIWYG_DEFAULT_KEY, 'false')
-            const ev = new CustomEvent('flymd:wysiwyg:default', { detail: { enabled: false } })
-            window.dispatchEvent(ev)
-          } catch {}
-        }
-
         setSourcemodeDefault(enabled)
       })
     }

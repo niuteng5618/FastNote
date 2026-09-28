@@ -2,7 +2,7 @@
   "id": "markdown-table",
   "name": "Markdown 表格助手",
   "version": "0.1.6",
-  "author": "flyMD",
+  "author": "FastNote",
   "description": "在光标处快速插入 Markdown 表格",
   "i18n": {
     "en": {

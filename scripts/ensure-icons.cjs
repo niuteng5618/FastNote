@@ -14,10 +14,10 @@ const iconPng = path.join(iconsDir, 'icon.png');
 const iconIco = path.join(iconsDir, 'icon.ico');
 const iconIcns = path.join(iconsDir, 'icon.icns');
 const fileAssocIconIco = path.join(windowsDir, 'file-association.ico');
-const sourceRaw = path.join(projectRoot, 'Flymdnew.png');
+const sourceRaw = path.join(projectRoot, 'FastNote.png');
 const sourceSafe = path.join(iconsDir, 'icon-source.png');
 const safeMaker = path.join(projectRoot, 'scripts', 'make_icon_safearea.py');
-const fileAssocSource = path.join(projectRoot, 'ICO03.png');
+const fileAssocSource = path.join(projectRoot, 'FastNote-doc.png');
 const fileAssocMaker = path.join(projectRoot, 'scripts', 'make_file_assoc_icon.py');
 
 function mtimeMs(file) {

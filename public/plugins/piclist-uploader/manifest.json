@@ -2,7 +2,7 @@
   "id": "piclist-uploader",
   "name": "PicList 图床",
   "version": "0.1.0",
-  "author": "flyMD",
+  "author": "FastNote",
   "description": "通过 PicList 上传本地图片/也可右键上传指定图片",
   "i18n": {
     "en": {

@@ -33,6 +33,32 @@
 - `flymd_*` Rust 命令名、`flymd.tab-transfer.v1` 协议、文件关联 ProgID。
 - 更新检查与插件市场 URL（`flyhunterl/flymd`、`flymd.llingfei.com`）——改了即断更新断市场，除非自建服务。
 
+### 品牌残留清理（2026-09-28）
+
+在 v1.0.1 之后又做了一轮「flyMD 品牌残留 → FastNote」清理，只动可见品牌层，内部标识符按上表保持不动：
+
+- **图标/Logo 全套替换**：新设计 FastNote 品牌标志（渐变圆角方形 + 白色「F」+ 速记横线），生成脚本 `scripts/generate_fastnote_logo.py`（应用图标源）与 `scripts/generate_fastnote_fileicon.py`（文件关联文档图标源）。
+  - 源图重命名：`Flymdnew.png/.ico` → `FastNote.png/.ico`（favicon），`ICO03.png` → `FastNote-doc.png`（文件关联）。旧 `flymd.png` 未被引用，已删除。
+  - 引用同步：`index.html`、`scripts/ensure-icons.cjs`（`sourceRaw` / `fileAssocSource`）、`.github/workflows/build.yml`（`npx tauri icon ./FastNote.png`）。
+  - `src-tauri/icons/` 是 gitignore 的产物目录，由 `ensure-icons.cjs`（pretauri:build/dev）从上述源图重建，CI 亦重跑 `tauri icon`。
+- **插件官方署名**：24 个内置插件 `manifest.json` 与本地 `index.json` 的官方作者 `flyMD` / `飞速MarkDown` → `FastNote`（第三方作者 xxtui/vita0519/HansJack 等保留）。
+  - 配套改 `src/extensions/extensionsPanel.ts` 的 `isOfficialAuthor`：新增识别 `fastnote` 前缀，同时**保留** `flymd` / `飞速markdown`（线上市场索引仍可能返回旧署名，去掉会让上游插件失去「官方」标）。
+- **许可元数据**：`package.json` 的 `license` 由残留的 `LicenseRef-flyMD-NC-1.0` 改为 `GPL-3.0-or-later`，与 `LICENSE` 正文和 README 徽章一致（LICENSE 明确 GPL-3.0，旧 SPDX id 是上游遗留、与正文矛盾）。`LICENSE` 首行品牌头改为 FastNote。
+- **文档品牌层**：README(.en) 标题/简介/徽章/下载链接指向 `niuteng5618/FastNote`（去掉指向上游 winget 的徽章）；`plugin.md(.en)`、`BUILD_ANDROID.md` 标题与简介句改名。ROADMAP 正文历史更新日志未动。
+- **有意保留的品牌字样**：图床优惠码 `flymd`（真实兑换码，改了失效）；AI 助手插件自带头像 `public/plugins/ai-assistant/Flymdnew.png` 及其远端兜底 URL（插件自包含资源，且远端在上游服务器）；`flymd-RAG` 插件 id/显示名（AI 助手按字面串 `flymd-RAG` 做集成，改名会断联）；`webdavSync.ts` 的 `.flymd/` 库标识目录（跨设备同步锚点）；Rust 内部 `flymd-startup.log`、`flymd://` 事件、`com.flymd` 等。
+
+### 删除「推送到 xxtui」与「创建提醒」功能（2026-09-28）
+
+这两个功能都由 `xxtui-todo-push` 插件驱动（`pushToXxtui` / `parseAndCreateReminders`），入口散落在三处 UI，已整体删除：
+
+- **删插件**：`public/plugins/xxtui-todo-push/` 整目录；`index.json` 移除该市场条目；`i18n.ts` 删 `ext.todoPush.*`；`extensionsPanel.ts` 删 `MARKET_OFFICIAL_I18N['xxtui-todo-push']`。
+- **日历与待办面板**（`src/diaryTasks/panel.ts`）：删底部「推送到 xxtui」「创建提醒」两个按钮 + 其 onclick + `setTab` 里对应的显隐、`XxtuiApi` 类型、`PanelDeps.getXxtuiApi`；`main.ts` 的 `initDiaryTasks({...})` 去掉 `getXxtuiApi`。相关 i18n（`diaryTasks.pushXxtui/createReminders/err.xxtui/err.pushNone/err.pushFail/pushOk/remindOk/err.remindFail`）已删。
+- **便签模式**（`main.ts`）：删整个 `addStickyTodoButtons`（📤推送 + ⏰提醒按钮 + @时间🕐图标 + tooltip 格式化）及 `handleStickyTodoPush` / `handleStickyTodoReminder`；预览渲染回调只保留 `scheduleAdjustStickyHeight()`。
+  - 连带删「便签提醒持久化」：`stickyNoteReminders` 变量、`StickyNoteReminderMap` 类型、`stickyNoteHost.ts` 的 `getReminders/setReminders` 依赖、`stickyNote.ts` 核心 `loadStickyNotePrefsCore/saveStickyNotePrefsCore` 的 `reminders` 参数与 `StickyNotePrefs.reminders` 字段。旧 `flymd-sticky-note.json` 里残留的 `reminders` 字段读取时被忽略，向后兼容。
+  - `style.css` 里 `.sticky-todo-*` / `.task-content` / `.task-time-icon` / `.task-tooltip` 规则已成死样式（无 DOM 命中），保留未删，无副作用。
+- **AI 助手**（`public/plugins/ai-assistant/main.js`）：删「生成待办并创建提醒」命令 `generateTodosAndPush` + 右键菜单项、动作下拉里的「提醒」选项、`sendFromInputWithAction`/select-change 的 `提醒` 分支、`processPendingQuickAction` 的 `reminder` 分支。**保留**纯「生成待办」`generateTodos` 与 `generateTodosForPlugins`。
+- **保留**：`editor-enhancer` 插件作者署名 `xxtui`（真实第三方作者，非本功能）；`scan.ts` 对历史 `[pushed]`/`[reminded]` 标记的清理逻辑（帮助清理旧文件遗留标记）。
+
 ## 二、发布流程
 
 - 工作流 `.github/workflows/build.yml`：
@@ -238,6 +264,51 @@ npm install && npm run tauri:dev   # 开发模式，改 src/ 自动热更新
 - **背景**：「图床管理」「WebDAV 同步」是写死在宿主里的功能（粘贴管线 / 启动关机钩子），并非真扩展；此前用 `builtinPlugins` 影子条目伪装成扩展显示在扩展管理列表（带 `(builtin)` 标签和设置按钮）。且插件市场（原作者控制）没有这两个插件，「删除内置、改为市场安装」不可行。
 - **处理**：仅从扩展管理列表移除这两行（`extensionsPanel.ts`：删 `builtinPlugins` 数组、行渲染块、状态标签刷新块、统一排序赋值；`main.ts`：删无消费方的同名死数组），功能本身不动，**入口保留在左侧「插件」下拉菜单**（`pluginRuntimeHost.ts` 的 `addToPluginsMenu('builtin-webdav-sync' / 'builtin-uploader-s3')`）。
 - **注意**：`i18n.ts` 的 `ext.builtin.*` 键要保留——插件菜单的条目名还在引用；`.upl-overlay` 等样式与图床无关（库设置/重命名等也在用），勿连带删除。老用户 store 里若残留 `uploader-s3` 的安装记录，`backfillInstalledAuthors` 的 `p.builtin` 守卫仍会跳过，无副作用。
+
+### AI 助手重构为「Agent + tool_call」待办/日记助手（2026-09-28）
+
+用户需求：AI 助手改成只做「填写待办、编写日记并自动生成文件」的 Agent，用 tool_call 驱动；纯自定义接口（OpenAI 兼容 / Anthropic 兼容，URL 自动补全）；右下角浮动弹窗（Dify 式，点开/清屏/折叠）；能感知当前文件路径与库根；**所有写文件都需执行前确认**；删掉续写/润色/纠错/提纲/摘要/翻译/视觉。
+
+- **整份重写** `public/plugins/ai-assistant/main.js`（6229 行 → 约 640 行）。旧的写作动作、免费代理模式（硅基流动 `ai_proxy.php` + `X-Flymd-Token`）、diff 版 `__AI_AGENT__`、RAG 开关、视觉全部删除。保留插件契约 `export activate/deactivate`。
+- **供应商**：配置只剩 `apiFormat`(openai|anthropic)/`baseUrl`/`apiKey`/`model`/`maxCtxChars`。`resolveEndpoint` 自动补全（bare→`/v1/chat/completions` 或 `/v1/messages`，已带完整路径原样用）；`effectiveFormat` 按 URL 反推格式覆盖下拉。`buildHeaders`：openai 用 `Authorization: Bearer`，anthropic 用 `x-api-key`+`anthropic-version`。网络走 `aiFetch`（Tauri http 插件绕 CORS，`http://*:*` 已在 tauri.conf 放行，用户 LAN 端点可直连）。
+- **tool_call**：`openaiAdapter`/`anthropicAdapter` 各自实现 `buildBody/parse/pushAssistant/pushToolResults`；中立工具集 `TOOLS`：`get_workspace_context`、`read_current_document`、`list_todo_or_diary`（只读）、`write_todos`、`write_diary`（写·需确认）。`runAgent` 循环上限 `MAX_TURNS=6`。会话只持久化 user/assistant 文本（工具轮次不入库），多轮上下文靠文本历史。
+- **写入确认**：`write_*` 工具在 `toolWrite` 里先算好目标路径+内容预览，`confirmWriteCard` 在对话流渲染红色确认卡（确认/取消）并 await 用户点击；确认后才落盘，取消回填「用户已取消」。
+- **文件落点复用内置「日记与待办」**：新增宿主桥接 `window.flymdDiaryTasks`（`src/main.ts` ~6501，复用 `diaryTasks/taskFiles.ts` 的 `buildTaskFilePath`/`writeTaskFile` + `templates.ts` 的 `loadTemplates`/`renderTemplate`）：`today/buildPath/readFile/writeTodos/writeDiary`。插件优先用桥接（套用户模板、路径 `<库根>/日记与待办/<年-月>/<日期>-待办.md`·`-日记.md`，与日历面板一致）；桥接缺失时回退自己拼路径 + `context.invoke('write_text_file_any')`（Rust 侧自动建目录）。
+- **UI**：右下角常驻圆形 FAB（`#ai-fab`），点击开合 `#ai-pop` 弹窗（384×560）；头部有 能力/清屏/设置/折叠；输入框 Enter 发送、Shift+Enter 换行。Ribbon 按钮与菜单项也切换弹窗。能力卡 `CAPABILITIES_TEXT` 首开展示、可点「能力」重看，用户问「你能做什么」由 system prompt 回答。
+- **manifest**：version 0.4.8→0.5.0、description 改「Agent 式待办/日记助手」、homepage 修残留 `flyhunterl/flymd`→`niuteng5618/FastNote`、assets 清空（新 UI 不再用头像/Powered-by 图，文件仍留在目录）。
+- **UI/工具细化（同日二次调整）**：新增只读工具 `get_current_time`（查看时间，共 6 工具）；「能力」按钮改为渲染工具清单卡片（读/写徽章 + 工具名 + label，不再是介绍文本）；修复「清屏」——原 `clearScreen` 立刻重插长介绍，改为清空后只留一句短问候 `GREETING`（首开也用它）；FAB 52→40px、弹窗 384×560→360×520。
+- **代理支持 + 能力卡布局（同日三次调整）**：设置新增「HTTP 代理（可选）」字段（`cfg.proxy`），`performRequest` 在有值时给请求 opt 加 `proxy:{all:代理URL}`——经 `@tauri-apps/plugin-http` v2 的 `fetch(init & ClientOptions)` 的 `proxy` 生效（浏览器回退 fetch 会忽略）。用户环境需 `http://172.25.86.12:7897` 才能出网。能力卡从每行 flex 改为单个 `.ai-cap-grid`（`grid-template-columns:auto auto 1fr`）让读写徽章/工具名/说明三列跨行对齐。jsdom 自测验证 proxy 已带入请求且待办仍正常落盘。
+- **AI 回复 Markdown 渲染（同日四次调整）**：AI 回复不再原文输出，新增自带轻量 Markdown 渲染器 `renderMarkdown`（标题/有序无序列表/引用/围栏代码块/行内代码/加粗斜体/链接/删除线/分隔线，全程 escapeHtml 安全）+ `mdInline`；`renderMsg(role)` 区分——**AI(assistant) 走 renderMarkdown，用户输入仍走 renderInline 纯文本**（避免把用户内容误当 markdown）。`addMessage`/`setMessageText`/`renderSessionToDom` 均改用之。配套 CSS `.ai-msg.assistant` 下的 h/ul/ol/li/code/pre/blockquote/a/hr 排版。jsdom 自测覆盖各块级元素渲染，通过。
+- 验证：`npx esbuild` 解析插件通过；`npx vite build` 通过（含 main.ts 桥接）。另用 jsdom 自测脚本驱动完整 Agent 循环（mock 模型发 tool_call）：待办与日记均能正确落盘到 `日记与待办/<年-月>/<日期>-待办.md`·`-日记.md`（`- [ ]` 格式、确认卡自动确认后写入），通过后已删脚本。插件为运行时加载，需在应用内重载生效；且 App 实际加载的是 AppLocalData 里的安装副本（`~/.local/share/com.flymd/flymd/plugins/ai-assistant/`），改完 public 源码后已手动同步覆盖该副本。实测仍需用户填本地端点 `http://172.25.67.140:9997/v1` + model `Qwen3.6-27B` + key。Anthropic 分支本地无端点，仅静态核对。
+
+### 更新检测指回上游导致误报新版本（2026-09-28）
+
+- **现象**：启动/手动检查更新时总弹「发现新版本 v1.4.4（当前 v1.0.1）」，changelog 是 flyMD 上游的。
+- **根因**：`src-tauri/src/main.rs` 的 `check_update` 把更新源写死为上游 `https://api.github.com/repos/flyhunterl/flymd/releases`（上游已到 v1.4.4，故恒判定有新版本）；弹窗里的「其他公告/官方网站/更新历史」来自本地 `public/update-extra.json`，链接也指向上游 `flymd.llingfei.com` 与 `flyhunterl/flymd`。
+- **改动**：`main.rs` 更新源改为本仓 `https://api.github.com/repos/niuteng5618/FastNote/releases`（草稿 release 会被 `!r.draft` 过滤，未正式发布前不会再误报）；`public/update-extra.json` 的链接改为 FastNote 仓库与其 releases 页。
+- **注意**：两处都要**重新编译打包**才对已装二进制生效。当前已装的 v1.0.1 想立即止弹：主题设置里打开「关闭更新检测」开关（`update-check-disabled-toggle` / `updateCheckPrefs`，纯前端、无需重编）。
+
+### 取消只读「阅读」模式 + 默认改所见 + 所见改名「阅读」（2026-09-28）
+
+用户需求：① 取消原来可切换的只读预览模式（原名「阅读」，`mode='preview'`）及其入口；② 各种场景默认都进所见模式；③ 把所见模式（Milkdown 富文本可编辑）改名为「阅读模式」。
+
+- **只保留引擎，删用户入口**：`renderPreview` / `mode='preview'` 仍在（打印、导出 PDF/DOCX、`源码+预览分屏` 都靠它），**只删掉用户主动切到只读预览的入口**：
+  - `main.ts` 删掉 `Ctrl+R` 的 keydown 块（进入只读预览）；`Ctrl+Shift+R`（最近文件）保留。
+  - `main.ts` 原生右键菜单（`showTopMenu`）删掉 `mode.read`（Ctrl+R）那一项。
+  - `handleToggleModeShortcut()`（`Ctrl+E`）改为「源码 ↔ 阅读(所见)」：源码时 `setWysiwygEnabled(true)`（若在分屏先退出），所见时 `setWysiwygEnabled(false)`。不再调 `toggleMode()`。
+  - `toggleMode()` / `syncToggleButton()` / 隐藏的 `#btn-toggle`（`display:none`）保留未动——已无可见入口，属死代码但无副作用。
+- **默认所见**：
+  - 6 处文件树 `onOpenNewFile`（新建文件）从「`openFile2` 后强制 `mode='edit'` + 隐藏预览 + focus」改为只 `await openFile2(p)`，与 `onOpenFile` 一致 → 走 `switchToPreviewAfterOpen()` 默认进所见。
+  - 冷启动块（`main.ts` init 尾部）：原来「仅当 `flymd:wysiwyg:default==='true'` 才进所见」改为「默认进所见，除非勾了默认源码模式或当前是 PDF」（`shouldEnableWysiwyg = !sourcemodeDefault && !hasCurrentPdf`）。
+  - `switchToPreviewAfterOpen()` 未改（本来就是默认所见，尊重 `flymd:sourcemode:default` 与 PDF）。
+- **设置面板删冗余开关**：`theme.ts` 删掉「默认阅读模式（原默认所见，`#wysiwyg-default-toggle` / `flymd:wysiwyg:default`）」开关及其 get/set/互斥逻辑——所见已是全局默认，该开关恒真无意义。**保留**「默认源码模式」开关（`flymd:sourcemode:default`）作为唯一的反向 opt-out。`focusModeUi.ts` 里监听 `flymd:wysiwyg:default` 的 listener 留着（事件不再触发，无害）；`main.ts` `openFile` 里读 `WYSIWYG_DEFAULT_KEY` 的死变量留着（恒 false，`switchToPreviewAfterOpen` 兜底默认所见）。
+- **改名 所见→阅读（仅用户可见文案，内部标识/注释不动）**：
+  - `main.ts` 左下角模式弹窗（`#mode-pop`）`data-mode-target="wysiwyg"` 标签 `所见→阅读`（快捷键仍 Ctrl+W）；toggleWysiwyg 按钮 title `所见模式→阅读模式`；原生菜单 `源码 + 阅读分屏→源码 + 预览分屏`（避免与新「阅读=所见」撞名）。
+  - `i18n.ts`：`mode.wysiwyg` `所见/WYSIWYG→阅读/Reading`；`theme.wysiwygMode`/`theme.wysiwygBg`/`sc.toggleWysiwyg` 及两条 tip 的 `所见→阅读`、英文 `WYSIWYG→Reading`；`sc.toggleEditPreview` `切换编辑/预览→切换源码/阅读`。`mode.read`（原「阅读/Preview」）键保留（只被隐藏的 `#btn-toggle` title 引用）。
+  - `uiNotifications.ts` 模式切换 toast：所见 `所见模式→阅读模式`；预览 `阅读模式→预览模式`（只读预览态现只在 PDF/打印出现）。
+  - `sourcePreviewSplit.ts` / `stickyNoteUi.ts` 的用户 alert 文案 `所见→阅读`、`源码+阅读分屏→源码+预览分屏`。
+- **未动**：分屏（`sourcePreviewSplit.ts`，源码+右侧渲染预览）功能与 Ctrl+Shift+E 完全保留；`wysiwyg`/`wysiwygV2Active` 变量名、`src/wysiwyg/` 目录、所有代码注释里的「所见」内部叫法不动。
+- 验证：`npx vite build` 通过。
 
 ## 六、待办 / 风险
 

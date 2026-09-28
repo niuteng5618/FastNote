@@ -2,7 +2,7 @@
   "id": "typecho-manager",
   "name": "Typecho 博文管理",
   "version": "0.1.5",
-  "author": "flyMD",
+  "author": "FastNote",
   "description": "通过 XML-RPC 从 Typecho 拉取博文并保存为本地 Markdown，支持按时间 / 分类筛选和按需下载。",
   "i18n": {
     "en": {

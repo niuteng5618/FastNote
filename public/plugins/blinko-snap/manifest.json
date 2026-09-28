@@ -2,7 +2,7 @@
   "id": "blinko-snap",
   "name": "Blinko 集成",
   "version": "1.2.0",
-  "author": "flyMD",
+  "author": "FastNote",
   "description": "深度集成 Blinko：发送文章、从列表选择拉取、同步本地目录，并生成可登录的 Blinko 门户文档",
   "i18n": {
     "en": {
