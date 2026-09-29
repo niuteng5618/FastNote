@@ -42,7 +42,7 @@ const state = {
   selectedIsDir: false,
   watching: false,
   unwatch: null as null | (() => void),
-  sortMode: 'mtime_asc' as 'name_asc' | 'name_desc' | 'mtime_asc' | 'mtime_desc',
+  sortMode: 'name_asc' as 'name_asc' | 'name_desc' | 'mtime_asc' | 'mtime_desc',
   currentRoot: null as string | null,
   // ASP：后缀展示配置与 allow-set 缓存（仅在 refresh/render 时更新）
   additionalSuffixMeta: null as Record<string, FileTreeAdditionalSuffixMeta> | null,
@@ -278,6 +278,10 @@ function shouldSkipLibraryDir(p: string): boolean {
     || n === 'service worker'
 }
 
+// 始终在侧栏可见的目录名白名单（不依赖「含受支持文档」过滤）。
+// images/ 等纯附件目录用户仍希望在侧栏可见，便于管理粘贴的图片。
+const ALWAYS_VISIBLE_DIR_NAMES: Set<string> = new Set(['images'])
+
 async function ensureDir(dir: string) { try { await mkdir(dir, { recursive: true } as any) } catch {} }
 
 async function moveFileSafe(src: string, dst: string): Promise<void> {
@@ -308,9 +312,9 @@ export async function newFolderSafe(dir: string, hint = '新建文件夹'): Prom
   while (await exists(dir + s + n)) { n = `${hint} ${++i}` }
   const full = dir + s + n
   await mkdir(full, { recursive: true } as any)
-  // 创建一个占位文件，使文件夹在库侧栏中可见
-  const placeholder = full + s + '新建文档.md'
-  await writeTextFile(placeholder, '# 标题\n\n', {} as any)
+  // 取消「新建文件夹时自动创建占位文档」：用户希望空文件夹即建即止。
+  // 注：文件树默认仅展示含受支持文档的目录，空文件夹可能暂不可见；
+  // 待用户在其中新建文档后即会出现。images 等白名单目录始终可见。
   return full
 }
 
@@ -481,8 +485,11 @@ async function listDir(root: string, dir: string): Promise<{ name: string; path:
     }
     if (isDir) {
       if (shouldSkipLibraryDir(p)) continue
-      // 仅保留“包含受支持文档(递归)”的目录
-      if (await dirHasSupportedDocRecursive(p, allow)) {
+      // 「始终可见」目录白名单：images 等纯附件目录虽不含文档，用户仍希望在侧栏可见
+      const lowerName = nameOf(p).trim().toLowerCase()
+      const alwaysVisible = ALWAYS_VISIBLE_DIR_NAMES.has(lowerName)
+      // 仅保留“包含受支持文档(递归)”的目录，或命中白名单的目录
+      if (alwaysVisible || await dirHasSupportedDocRecursive(p, allow)) {
         dirs.push({ name: nameOf(p), path: p, isDir: true, mtime: needMtime ? toMtimeMs(st) : undefined })
       }
     } else {
@@ -524,7 +531,7 @@ async function listDir(root: string, dir: string): Promise<{ name: string; path:
   else if (state.sortMode === 'name_desc') { dirs.sort(dirManualFirst(byNameDesc)); items.sort(pdfGrouped(byNameDesc)) }
   else if (state.sortMode === 'mtime_asc') { dirs.sort(dirManualFirst(byMtimeAsc)); items.sort(pdfGrouped(byMtimeAsc)) }
   else if (state.sortMode === 'mtime_desc') { dirs.sort(dirManualFirst(byMtimeDesc)); items.sort(pdfGrouped(byMtimeDesc)) }
-  else { dirs.sort(dirManualFirst(byMtimeAsc)); items.sort(pdfGrouped(byMtimeAsc)) }
+  else { dirs.sort(dirManualFirst(byNameAsc)); items.sort(pdfGrouped(byNameAsc)) }
   return [...dirs, ...items]
 }
 

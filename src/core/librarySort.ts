@@ -4,10 +4,10 @@ import type { Store } from '@tauri-apps/plugin-store'
 
 export type LibSortMode = 'name_asc' | 'name_desc' | 'mtime_asc' | 'mtime_desc'
 
-// 从 Store 中读取库排序偏好，非法值回退到 mtime_asc（默认按修改时间正序）
+// 从 Store 中读取库排序偏好，非法值回退到 name_asc（默认按名称升序，位置稳定不随编辑跳动）
 export async function getLibrarySort(store: Store | null): Promise<LibSortMode> {
   try {
-    if (!store) return 'mtime_asc'
+    if (!store) return 'name_asc'
     const val = await store.get('librarySort')
     const s = typeof val === 'string' ? val : ''
     const allowed: LibSortMode[] = [
@@ -16,9 +16,9 @@ export async function getLibrarySort(store: Store | null): Promise<LibSortMode> 
       'mtime_asc',
       'mtime_desc',
     ]
-    return allowed.includes(s as any) ? (s as LibSortMode) : 'mtime_asc'
+    return allowed.includes(s as any) ? (s as LibSortMode) : 'name_asc'
   } catch {
-    return 'mtime_asc'
+    return 'name_asc'
   }
 }
 

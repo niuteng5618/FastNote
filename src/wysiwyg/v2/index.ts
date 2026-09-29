@@ -4,7 +4,7 @@
 import { history } from '@milkdown/plugin-history'
 import { Editor, rootCtx, defaultValueCtx, editorViewOptionsCtx, editorViewCtx, commandsCtx, remarkStringifyOptionsCtx, parserCtx } from '@milkdown/core'
 import { TextSelection, type Command } from '@milkdown/prose/state'
-import { DOMParser as ProseDOMParser, Slice as ProseSlice } from '@milkdown/prose/model'
+import { DOMParser as ProseDOMParser, Slice as ProseSlice, Fragment as ProseFragment } from '@milkdown/prose/model'
 import { convertFileSrc } from '@tauri-apps/api/core'
 import { readFile } from '@tauri-apps/plugin-fs'
 // 用于外部（main.ts）在所见模式下插入 Markdown（文件拖放时复用普通模式逻辑）
@@ -136,6 +136,22 @@ function restoreEscapedDollars(previousMd: string, nextMd: string): string {
     }
   }
   return out
+}
+
+// 清洗 Milkdown remarkPreserveEmptyLinePlugin 为「保留空行」在空段落里插入的 <br /> 占位。
+// 序列化产物形如独立成行的 `<br />` / `<br>` / `<br/>` / `<br >`（两侧空行）。
+// 回灌解析时这些 html 节点会被当 HTML 渲染，导致「一次回车产生多空行并显示异常」。
+// 这里把「独立成行（整行只有 br 及空白）」的占位行删掉，让该处保持为普通空段落。
+// 仅删整行 br 占位，不影响行内 <br> 或代码块内的 <br>。
+function normalizePreservedBrLines(md: string): string {
+  try {
+    const s = String(md || '')
+    if (!s.includes('<br')) return s
+    // 整行只有 <br (可选空白/斜杠)>：删掉该行内容（保留换行结构）。
+    return s.replace(/^[ \t]*<br\s*\/?>[ \t]*$/gm, '')
+  } catch {
+    return md
+  }
 }
 
 async function applyHtmlTableToGfmIfEnabled(): Promise<void> {
@@ -324,6 +340,52 @@ function insertHtmlAtSelection(view: any, html: string): boolean {
   }
 }
 
+// 判断节点子树中是否含有 hardbreak 节点（Milkdown 把多行纯文本解析为单段含 hardbreak）
+function containsHardBreak(node: any): boolean {
+  try {
+    if (!node) return false
+    if (node.type?.name === 'hardbreak') return true
+    const frag = node.content
+    if (frag && typeof frag.childCount === 'number') {
+      for (let i = 0; i < frag.childCount; i++) {
+        const child = frag.child(i)
+        if (child && containsHardBreak(child)) return true
+      }
+    }
+    return false
+  } catch {
+    return false
+  }
+}
+
+// 把「含 hardbreak 的单段」拆成多个段落（每个 hardbreak 作为段落边界）。
+// 输入为解析得到的顶层 Fragment（或 Node），输出为新的 Fragment。
+// 仅对顶层是单个 paragraph 且含 hardbreak 的情况做拆分；其余情况原样返回 content。
+function splitHardBreakParagraphs(content: any, schema: any): any {
+  try {
+    if (!content || typeof content.childCount !== 'number') return content
+    // 仅处理「单个 paragraph 含 hardbreak」的情况
+    if (content.childCount !== 1) return content
+    const para = content.firstChild
+    if (!para || para.type?.name !== 'paragraph' || !containsHardBreak(para)) return content
+    const paragraphType = schema?.nodes?.paragraph
+    if (!paragraphType) return content
+    // Fragment 没有公开 API 收集行内节点，靠 forEach 遍历
+    const buckets: any[][] = [[]]
+    para.forEach((child: any) => {
+      if (child.type?.name === 'hardbreak') {
+        buckets.push([])
+      } else {
+        buckets[buckets.length - 1].push(child)
+      }
+    })
+    const paragraphs = buckets.map((arr) => paragraphType.create(null, arr.length ? arr : undefined))
+    return ProseFragment.from(paragraphs)
+  } catch {
+    return content
+  }
+}
+
 function insertMarkdownAtSelection(markdown: string): boolean {
   try {
     let inserted = false
@@ -340,13 +402,20 @@ function insertMarkdownAtSelection(markdown: string): boolean {
         return
       }
       const content = parsed.content
-      // 纯行内内容（单个段落）并入当前段落；含块级结构（标题/列表/引用等）则另起块、保留结构。
+      // 纯行内内容（单个段落且不含 hardbreak）并入当前段落；
+      // 含块级结构（标题/列表/引用等）则另起块、保留结构。
+      // 注意：Milkdown 会把多行纯文本解析成单个含 hardbreak 的 paragraph。
+      // 若走 maxOpen 并入当前段落，hardbreak 会以 inline span 渲染导致「粘贴不换行」，
+      // 故此处对含 hardbreak 的单段先拆成多个段落（hardbreak 作为段落边界），
+      // 再以 openStart/openEnd=0 的 Slice 插入，使各行成为独立段落。
+      const firstChild = content.firstChild
       const singleParagraph = content.childCount === 1
-        && content.firstChild
-        && content.firstChild.type?.name === 'paragraph'
+        && firstChild
+        && firstChild.type?.name === 'paragraph'
+        && !containsHardBreak(firstChild)
       const slice = singleParagraph
         ? ProseSlice.maxOpen(content)
-        : new ProseSlice(content, 0, 0)
+        : new ProseSlice(splitHardBreakParagraphs(content, view.state.schema), 0, 0)
       view.dispatch(view.state.tr.replaceSelection(slice).scrollIntoView())
       inserted = true
     })
@@ -803,7 +872,12 @@ export async function enableWysiwygV2(root: HTMLElement, initialMd: string, onCh
         } catch { return md2 }
       })()
       const md3Clean = stripStrongBoundaryGuard(md3)
-      const md4 = normalizeTabIndentText(unprotectExcelDollarRefs(restoreEscapedDollars(_lastMd, md3Clean)))
+      // 清洗 Milkdown remarkPreserveEmptyLinePlugin 为「保留空行」在空段落里插入的 <br /> 占位：
+      // 序列化产物形如 `\n\n<br />\n\n`（独立成行的 <br />/<br>/<br/>/<br >）。
+      // 回灌解析时这些 html 节点会被当作 HTML 渲染，导致「一次回车产生多空行并显示异常」。
+      // 这里把「独立成行的 br 占位」规整为普通空行（即空段落），避免回灌膨胀。
+      const md3NoBr = normalizePreservedBrLines(md3Clean)
+      const md4 = normalizeTabIndentText(unprotectExcelDollarRefs(restoreEscapedDollars(_lastMd, md3NoBr)))
       _lastMd = md4
       try { _onChange?.(md4) } catch {}
       try { setTimeout(() => { try { rewriteLocalImagesToAsset() } catch {} }, 0) } catch {}

@@ -54,7 +54,7 @@ export function initLibraryContextMenu(deps: LibraryContextMenuDeps): void {
     ev.preventDefault()
     // 读取当前排序模式，用于渲染排序项的正序/倒序状态（点击即切换）
     let curSort: LibSortMode
-    try { curSort = await deps.getCurrentSort() } catch { curSort = 'mtime_asc' }
+    try { curSort = await deps.getCurrentSort() } catch { curSort = 'name_asc' }
     const path = (row as any).dataset?.path as string || ''
     const isDir = row.classList.contains('lib-dir')
 
