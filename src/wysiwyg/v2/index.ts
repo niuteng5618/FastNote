@@ -4,7 +4,7 @@
 import { history } from '@milkdown/plugin-history'
 import { Editor, rootCtx, defaultValueCtx, editorViewOptionsCtx, editorViewCtx, commandsCtx, remarkStringifyOptionsCtx, parserCtx } from '@milkdown/core'
 import { TextSelection, type Command } from '@milkdown/prose/state'
-import { DOMParser as ProseDOMParser } from '@milkdown/prose/model'
+import { DOMParser as ProseDOMParser, Slice as ProseSlice } from '@milkdown/prose/model'
 import { convertFileSrc } from '@tauri-apps/api/core'
 import { readFile } from '@tauri-apps/plugin-fs'
 // 用于外部（main.ts）在所见模式下插入 Markdown（文件拖放时复用普通模式逻辑）
@@ -331,13 +331,23 @@ function insertMarkdownAtSelection(markdown: string): boolean {
       const view = ctx.get(editorViewCtx)
       const parser = ctx.get(parserCtx)
       const source = guardStrongBoundaryForCommonMark(String(markdown || ''))
-      const slice = parser(source)
-      if (!slice || typeof slice === 'string') {
+      // Milkdown 的 parserCtx 返回顶层 doc 节点（Node），而 replaceSelection 需要一个 Slice。
+      // 直接把 Node 当 Slice 传入会因缺少 openStart/openEnd 而失败，导致“粘贴无响应”。
+      const parsed: any = parser(source)
+      if (!parsed || typeof parsed === 'string' || !parsed.content || parsed.content.size === 0) {
         view.dispatch(view.state.tr.insertText(String(markdown || '')).scrollIntoView())
         inserted = true
         return
       }
-      view.dispatch(view.state.tr.replaceSelection(slice as any).scrollIntoView())
+      const content = parsed.content
+      // 纯行内内容（单个段落）并入当前段落；含块级结构（标题/列表/引用等）则另起块、保留结构。
+      const singleParagraph = content.childCount === 1
+        && content.firstChild
+        && content.firstChild.type?.name === 'paragraph'
+      const slice = singleParagraph
+        ? ProseSlice.maxOpen(content)
+        : new ProseSlice(content, 0, 0)
+      view.dispatch(view.state.tr.replaceSelection(slice).scrollIntoView())
       inserted = true
     })
     return inserted
@@ -724,15 +734,13 @@ export async function enableWysiwygV2(root: HTMLElement, initialMd: string, onCh
 
             // 兜底：普通粘贴纯文本（无富文本 HTML）时，按 markdown 解析渲染，而非插入原文。
             // 尊重「粘贴为纯文本」(Ctrl+Shift+V, pasteCombo==='plain')；若前面分支已处理则跳过。
+            // 注意：先尝试插入，仅在插入成功后才 preventDefault；否则放行给编辑器原生粘贴，
+            // 避免解析失败时既阻止了默认行为、又没插入内容，导致所见模式“粘贴无任何响应”。
             if (!ev.defaultPrevented && pasteCombo !== 'plain' && plainText && !html) {
-              ev.preventDefault()
-              try { ev.stopPropagation() } catch {}
-              try { (ev as any).stopImmediatePropagation?.() } catch {}
-              if (!insertMarkdownAtSelection(plainText)) {
-                try {
-                  const view = _getView()
-                  if (view) view.dispatch(view.state.tr.insertText(plainText).scrollIntoView())
-                } catch {}
+              if (insertMarkdownAtSelection(plainText)) {
+                ev.preventDefault()
+                try { ev.stopPropagation() } catch {}
+                try { (ev as any).stopImmediatePropagation?.() } catch {}
               }
             }
           } catch {}
