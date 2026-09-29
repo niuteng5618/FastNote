@@ -1,6 +1,6 @@
 [package]
 name = "flymd"
-version = "1.0.4"
+version = "1.0.5"
 description = "FastNote 轻量笔记"
 authors = ["FastNote"]
 edition = "2021"
